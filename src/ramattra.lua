@@ -59,7 +59,7 @@ local Functions = {
 
 	["createHUDText"] = {
 		ow = "Create HUD Text",
-		args = { "array|player", "string", "string", "string", "hudpos", "number", "color", "color", "color", "hudeval", "visibility" },
+		args = { "array<player>|player", "string", "string", "string", "hudpos", "number", "color", "color", "color", "hudeval", "visibility" },
 	},
 
 	["lastTextID"] = {

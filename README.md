@@ -5,38 +5,17 @@ A language written in lua that compiles to [Overwatch Workshop Scripts](https://
 ## Example
 
 ```rs
-event client(ply) { // Input variables from events.
-	let x = 5 // Variables which are stored in a single global array
+event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variables from events
+	let players = [victim, attacker]
 
-	disableGameModeHUD(ply) // Calling functions
-
-	ply.disableGameModeHUD() // Can call them as methods, as well.
-
-	if true { // If syntax builtin
-		let y = "Hello, string"
-		ply.disableMessages()
-	}
-
-
-	for x in 0..3 {
-		// for loop
-	}
-
-	// More complex method call example
-	// Enums are built in global constants.
-	(TEAM_1.allPlayers()).createHUDText("Header", "Subheader", "Text", HUD_LEFT, x, COLOR_RED, COLOR_WHITE, COLOR_BLUE, HUDEVAL_NONE, SPECTATOR_VISIBLE_DEFAULT)
-}
-
-event playerDied(victim, attacker, damage, crit, ability, dir) {
-	let x = 2.pow(4)
-
-	(TEAM_1.allPlayers()).createHUDText(
+	players.setInvisible(INVISIBLE_TO_ALL) // Enums as constants
+	players.createHUDText(
 		"Header",
 		"Subheader",
 		"Text",
 
 		HUD_LEFT,
-		x,
+		2,
 
 		COLOR_RED,
 		COLOR_WHITE,
@@ -46,7 +25,10 @@ event playerDied(victim, attacker, damage, crit, ability, dir) {
 		SPECTATOR_VISIBLE_DEFAULT
 	)
 
-	let id = lastTextID()
-	destroyHUDText(id)
+	let numbers = <number>[1, 2, 3, 4, 5] // Can annotate array type
+
+	for i in 0..5 { // For loop
+		let num = numbers[i]
+	}
 }
 ```
