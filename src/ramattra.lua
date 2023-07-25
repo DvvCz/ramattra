@@ -73,6 +73,8 @@ local Functions = {
 		args = { "textid" },
 	},
 
+	["format"] = { ow = "Custom String", args = { "string", "..." }, ret = "string" },
+
 	-- ["wait"] = { ow = "Wait", args = { "number" } },
 	["disableMessages"] = { ow = "Disable Messages", args = { "player" } },
 
