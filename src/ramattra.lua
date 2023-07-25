@@ -301,6 +301,10 @@ local function parse(src)
 			return
 		end
 
+		if consume("^//[^\n]+\n") then
+			return prev
+		end
+
 		if consume("^%+") then
 			return Expr.new(ExprKind.Add, { prev, assert(expr(), "Expected rhs expression for addition") })
 		elseif consume("^%-") then
@@ -370,7 +374,7 @@ local function parse(src)
 
 		local stmts = {}
 		while not consume("^}") do
-			consume("^//[^\n]+\n")
+			while consume("^//[^\n]+\n") do end
 			stmts[#stmts + 1] = assert(stmt(), "Expected statement to parse")
 		end
 
