@@ -1,6 +1,18 @@
 local Events = {
 	["client"] = { ow = "Ongoing - Each Player", params = { { "player", "Event Player" } } },
 	["server"] = { ow = "Ongoing - Global", params = {} },
+
+	["playerDied"] = {
+		ow = "Player Died",
+		params = {
+			{ "player", "Victim" },
+			{ "player", "Attacker" },
+			{ "number", "Event Damage" },
+			{ "boolean", "Event Was Critical Hit" },
+			{ "button", "Event Ability" },
+			{ "vector", "Event Direction" },
+		},
+	},
 }
 
 local Constants = {
@@ -44,16 +56,27 @@ local Constants = {
 
 local Functions = {
 	["disableGameModeHUD"] = { ow = "Disable Game Mode HUD", args = { "player" } },
+
 	["createHUDText"] = {
 		ow = "Create HUD Text",
-		args = { "array", "string", "string", "string", "hudpos", "number", "color", "color", "color", "hudeval", "visibility" },
+		args = { "array|player", "string", "string", "string", "hudpos", "number", "color", "color", "color", "hudeval", "visibility" },
 	},
+
+	["lastTextID"] = {
+		ow = "Last Text ID",
+		args = {},
+		ret = "textid",
+	},
+
+	["destroyHUDText"] = {
+		ow = "Destroy HUD Text",
+		args = { "textid" },
+	},
+
 	-- ["wait"] = { ow = "Wait", args = { "number" } },
 	["disableMessages"] = { ow = "Disable Messages", args = { "player" } },
 
 	["allPlayers"] = { ow = "All Players", args = { "team" }, ret = "array" },
-
-	["format"] = { ow = "Custom String", args = { "string", "...any" } },
 
 	-- Most of these should be Player | Array when unions are supported.
 	["setAbility1Enabled"] = { ow = "Set Ability 1 Enabled", args = { "player", "boolean" } },
@@ -87,25 +110,26 @@ local ExprKind = {
 	Ident = 6,
 	Call = 7,
 	MethodCall = 8,
+	Index = 9,
 
-	Add = 9,
-	Sub = 10,
-	Mul = 11,
-	Div = 12,
+	Add = 10,
+	Sub = 11,
+	Mul = 12,
+	Div = 13,
 
-	Eq = 13,
-	Neq = 14,
+	Eq = 14,
+	Neq = 15,
 
-	GreaterThan = 15,
-	GreaterThanOrEqual = 16,
-	LessThan = 17,
-	LessThanOrEqual = 18,
+	GreaterThan = 16,
+	GreaterThanOrEqual = 17,
+	LessThan = 18,
+	LessThanOrEqual = 19,
 
-	Or = 19,
-	And = 20,
-	Not = 21,
+	Or = 20,
+	And = 21,
+	Not = 22,
 
-	Typeof = 22,
+	Typeof = 23,
 }
 
 ---@class Expr
@@ -140,6 +164,14 @@ local Stringify = {
 
 	[ExprKind.Call] = function(expr)
 		return ("%s(%s)"):format(Functions[expr.data[1]].ow, table.concat(map(expr.data[2], tostring), ", "))
+	end,
+
+	[ExprKind.Index] = function(expr)
+		if expr.type == "string" then
+			return ("Char In String(%s, %s)"):format(expr.data[1], expr.data[2])
+		else
+			error("unreachable")
+		end
 	end,
 
 	[ExprKind.Add] = function(expr)
@@ -413,8 +445,21 @@ local function parse(src)
 		end
 	end
 
+	local function postop(e)
+		if consume("^%[") then
+			local index = assert(expr(), "Expected index expr")
+			assert(consume("^%]"), "Expected ] to close index brace")
+			return Expr.new(ExprKind.Index, { e, index })
+		end
+
+		return e
+	end
+
 	function expr()
-		return unop() or binop()
+		local e = unop() or binop()
+		if e then
+			return postop(e)
+		end
 	end
 
 	local function declare()
@@ -442,7 +487,7 @@ local function parse(src)
 				assert(consume("^([%w_]+)"), "Expected variable name after for keyword"),
 				assert(consume("^in"), "Expected in after for variable") and assert(number(), "Expected number after in keyword"),
 				assert(consume("^..")) and assert(number(), "Expected ending number"),
-				assert(block(), "Expected block after for statement")
+				assert(block(), "Expected block after for statement"),
 			}))
 			or declare()
 			or call()
@@ -455,12 +500,16 @@ local function parse(src)
 		end
 
 		local stmts = {}
+		while consume("^//[^\n]+\n") do
+		end
+
 		while not consume("^}") do
 			while consume("^//[^\n]+\n") do
 			end
 			stmts[#stmts + 1] = assert(stmt(), "Expected statement to parse")
-			while consume("^//[^\n]+\n") do
-			end
+		end
+
+		while consume("^//[^\n]+\n") do
 		end
 
 		return stmts
@@ -541,23 +590,37 @@ local function assemble(src)
 		[StmtKind.Call] = function(stmt)
 			local fn = assert(Functions[stmt.data[1]], "No such function: " .. stmt.data[1])
 
-			if #fn.args > #stmt.data[2] then
-				error("Incorrect # of arguments passed to " .. stmt.data[1] .. " expected " .. #fn.args .. " arguments")
+			if #stmt.data[2] < #fn.args then
+				error("Incorrect # of arguments passed to " .. stmt.data[1] .. " expected at least " .. #fn.args .. " arguments")
 			end
 
+			local vararg = false
 			for i, arg in ipairs(stmt.data[2]) do
 				expression(arg)
 
-				if fn.args[i] ~= arg.type then
-					error(
-						"Incorrect argument type passed to "
-							.. stmt.data[1]
-							.. " expected "
-							.. (fn.args[i] or "none")
-							.. " got "
-							.. arg.type
-					)
+				if vararg then
+					goto continue
 				end
+
+				if i > #fn.args then
+					error("Passing too many arguments to " .. stmt.data[1] .. " only expecting " .. #fn.args)
+				end
+
+				if fn.args[i] == "..." then
+					vararg = true
+				elseif fn.args[i] == arg.type then
+					goto continue
+				elseif fn.args[i] and fn.args[i]:find("|") then -- union type
+					for ty in fn.args[i]:gmatch("([^|]+)") do
+						if ty == arg.type then
+							goto continue
+						end
+					end
+				end
+
+				error("Incorrect argument type passed to " .. stmt.data[1] .. " expected " .. (fn.args[i] or "none") .. " got " .. arg.type)
+
+				::continue::
 			end
 		end,
 
@@ -639,14 +702,25 @@ local function assemble(src)
 
 		[ExprKind.Call] = function(expr)
 			local fn = assert(Functions[expr.data[1]], "Unknown function " .. expr.data[1])
-			if #fn.args > #expr.data[2] then
-				error("Incorrect # of arguments passed to " .. expr.data[1] .. " expected " .. #fn.args .. " arguments")
+			if #expr.data[2] < #fn.args then
+				error("Incorrect # of arguments passed to " .. expr.data[1] .. " expected at least " .. #fn.args .. " arguments")
 			end
 
+			local vararg = false
 			for i, arg in ipairs(expr.data[2]) do
 				expression(arg)
 
-				if fn.args[i] ~= arg.type then
+				if vararg then
+					goto continue
+				end
+
+				if i > #fn.args then
+					error("Passing too many arguments to " .. expr.data[1] .. " only expecting " .. #fn.args)
+				end
+
+				if fn.args[i] == "..." then
+					vararg = true
+				elseif fn.args[i] ~= arg.type then
 					error(
 						"Incorrect argument type passed to "
 							.. expr.data[1]
@@ -656,6 +730,8 @@ local function assemble(src)
 							.. arg.type
 					)
 				end
+
+				::continue::
 			end
 
 			return fn.ret
@@ -671,6 +747,16 @@ local function assemble(src)
 			expression(expr)
 
 			return expr.type
+		end,
+
+		[ExprKind.Index] = function(expr)
+			expression(expr.data[1])
+			assert(expr.data[1].type == "string", "Can only index string type")
+
+			expression(expr.data[2])
+			assert(expr.data[2].type == "number", "Can only pass number type into indexing expression")
+
+			return "string"
 		end,
 
 		[ExprKind.Add] = function(expr)
