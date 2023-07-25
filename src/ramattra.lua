@@ -66,6 +66,8 @@ local Functions = {
 	["Vector"] = { ow = "Vector", args = { "number", "number", "number" }, ret = "vector" },
 	["cross"] = { ow = "Cross Product", args = { "vector", "vector" }, ret = "vector" },
 	["dot"] = { ow = "Dot Product", args = { "vector", "vector" }, ret = "number" },
+
+	["pow"] = { ow = "Raise To Power", args = { "number", "number" } }
 }
 
 local function map(t, f)
@@ -99,6 +101,10 @@ local ExprKind = {
 	GreaterThanOrEqual = 16,
 	LessThan = 17,
 	LessThanOrEqual = 18,
+
+	Or = 19,
+	And = 20,
+	Not = 21
 }
 
 ---@class Expr
@@ -136,19 +142,19 @@ local Stringify = {
 	end,
 
 	[ExprKind.Add] = function(expr)
-		return ("%s + %s"):format(expr.data[1], expr.data[2])
+		return ("Add(%s, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Sub] = function(expr)
-		return ("%s - %s"):format(expr.data[1], expr.data[2])
+		return ("Subtract(%s, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Mul] = function(expr)
-		return ("%s * %s"):format(expr.data[1], expr.data[2])
+		return ("Multiply(%s, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Div] = function(expr)
-		return ("%s / %s"):format(expr.data[1], expr.data[2])
+		return ("Divide(%s, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Eq] = function(expr)
@@ -173,6 +179,18 @@ local Stringify = {
 
 	[ExprKind.LessThanOrEqual] = function(expr)
 		return ("%s <= %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.Or] = function(expr)
+		return ("Or(%s, %s)"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.And] = function(expr)
+		return ("And(%s, %s)"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.Not] = function(expr)
+		return ("Not(%s)"):format(expr.data)
 	end
 }
 
@@ -361,13 +379,24 @@ local function parse(src)
 			return Expr.new(ExprKind.GreaterThan, { prev, assert(expr(), "Expected rhs expression for >") })
 		elseif consume("^%<") then
 			return Expr.new(ExprKind.LessThan, { prev, assert(expr(), "Expected rhs expression for <") })
+		elseif consume("^||") then
+			return Expr.new(ExprKind.Or, { prev, assert(expr(), "Expected rhs expression for ||") })
+		elseif consume("^&&") then
+			return Expr.new(ExprKind.And, { prev, assert(expr(), "Expected rhs expression for ||") })
 		else
 			return prev
 		end
 	end
 
+	local function unop()
+		if consume("^!") then
+			return Expr.new(ExprKind.Not, assert(expr(), "Expected expression following ! for unary not operator"))
+		end
+	end
+
 	function expr()
 		return binop()
+			or unop()
 			or number()
 			or string()
 			or bool()
@@ -609,25 +638,25 @@ local function assemble(src)
 		[ExprKind.Add] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return expr.data[1].type
+			return "number"
 		end,
 
 		[ExprKind.Sub] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return expr.data[1].type
+			return "number"
 		end,
 
 		[ExprKind.Mul] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return expr.data[1].type
+			return "number"
 		end,
 
 		[ExprKind.Div] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return expr.data[1].type
+			return "number"
 		end,
 
 		[ExprKind.Eq] = function(expr)
@@ -666,6 +695,23 @@ local function assemble(src)
 			expression(expr.data[2])
 			return "boolean"
 		end,
+
+		[ExprKind.Or] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.And] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.Not] = function(expr)
+			expression(expr.data)
+			return "boolean"
+		end
 	}
 
 	function expression(expr)
