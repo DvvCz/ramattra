@@ -105,7 +105,7 @@ local ExprKind = {
 	And = 20,
 	Not = 21,
 
-	Typeof = 22
+	Typeof = 22,
 }
 
 ---@class Expr
@@ -159,27 +159,27 @@ local Stringify = {
 	end,
 
 	[ExprKind.Eq] = function(expr)
-		return ("%s == %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, ==, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Neq] = function(expr)
-		return ("%s != %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, !=, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.GreaterThan] = function(expr)
-		return ("%s > %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, >, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.GreaterThanOrEqual] = function(expr)
-		return ("%s >= %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, >=, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.LessThan] = function(expr)
-		return ("%s < %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, <, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.LessThanOrEqual] = function(expr)
-		return ("%s <= %s"):format(expr.data[1], expr.data[2])
+		return ("Compare(%s, <=, %s)"):format(expr.data[1], expr.data[2])
 	end,
 
 	[ExprKind.Or] = function(expr)
@@ -203,9 +203,10 @@ end
 local StmtKind = {
 	Event = 0,
 	If = 1,
-	Call = 2,
-	MethodCall = 3,
-	Declare = 4,
+	For = 2,
+	Call = 3,
+	MethodCall = 4,
+	Declare = 5,
 }
 
 ---@class Stmt
@@ -232,6 +233,17 @@ local Stringify = {
 
 	[StmtKind.If] = function(stmt)
 		return ("If(%s);\n\t%s;\nEnd"):format(stmt.data[1], table.concat(map(stmt.data[2], tostring), ";\n"):gsub("\n", "\n\t"))
+	end,
+
+	[StmtKind.For] = function(stmt)
+		return ("Set Global Variable At Index(Vars, %s, %s);\nWhile(Compare(Value In Array(Global Variable(Vars), %s), <, %s));\n\t%s;\n\tModify Global Variable At Index(Vars, %s, Add, 1);\nEnd"):format(
+			stmt.ow,
+			stmt.data[2], -- start range
+			stmt.ow,
+			stmt.data[3], -- end range
+			table.concat(map(stmt.data[4], tostring), ";\n"):gsub("\n", "\n\t"),
+			stmt.ow
+		)
 	end,
 
 	[StmtKind.Declare] = function(stmt)
@@ -426,6 +438,12 @@ local function parse(src)
 				assert(block(), "Expected block for if statement"),
 			})
 		)
+			or (consume("^for") and Stmt.new(StmtKind.For, {
+				assert(consume("^([%w_]+)"), "Expected variable name after for keyword"),
+				assert(consume("^in"), "Expected in after for variable") and assert(number(), "Expected number after in keyword"),
+				assert(consume("^..")) and assert(number(), "Expected ending number"),
+				assert(block(), "Expected block after for statement")
+			}))
 			or declare()
 			or call()
 			or methodcall()
@@ -441,6 +459,8 @@ local function parse(src)
 			while consume("^//[^\n]+\n") do
 			end
 			stmts[#stmts + 1] = assert(stmt(), "Expected statement to parse")
+			while consume("^//[^\n]+\n") do
+			end
 		end
 
 		return stmts
@@ -480,12 +500,22 @@ local function parse(src)
 end
 
 local function assemble(src)
-	local out = { "variables {\n\tglobal:\n\t\t0: Vars\n}" }
+	local out, globals = {}, { Vars = true }
 
 	local events = assert(parse(src))
 	local scopes, depth = { [0] = setmetatable({}, { __index = Constants }) }, 0
 
 	local flatvars, nflatvars = {}, 0
+
+	local function allocVar(name)
+		if flatvars[name] then
+			return flatvars[name]
+		else
+			nflatvars = nflatvars + 1
+			flatvars[name] = nflatvars
+			return nflatvars
+		end
+	end
 
 	local function pushScope()
 		depth = depth + 1
@@ -535,8 +565,23 @@ local function assemble(src)
 			expression(stmt.data[1])
 
 			pushScope()
-
 			for _, stmt in ipairs(stmt.data[2]) do
+				statement(stmt)
+			end
+			popScope()
+		end,
+
+		[StmtKind.For] = function(stmt)
+			expression(stmt.data[2])
+			expression(stmt.data[3])
+
+			pushScope()
+
+			local ow = allocVar(stmt.data[1])
+			stmt.ow = ow
+			scopes[depth][stmt.data[1]] = { type = "number", ow = "Value In Array(Global Variable(Vars), " .. ow .. ")" }
+
+			for _, stmt in ipairs(stmt.data[4]) do
 				statement(stmt)
 			end
 
@@ -556,12 +601,7 @@ local function assemble(src)
 		[StmtKind.Declare] = function(stmt)
 			expression(stmt.data[2])
 
-			if not flatvars[stmt.data[1]] then
-				nflatvars = nflatvars + 1
-				flatvars[stmt.data[1]] = nflatvars
-			end
-
-			local ow = tostring(flatvars[stmt.data[1]]) -- add depth to variable for shadowing
+			local ow = allocVar(stmt.data[1])
 			stmt.ow = ow
 			scopes[depth][stmt.data[1]] = { type = stmt.data[2].type, ow = "Value In Array(Global Variable(Vars), " .. ow .. ")" }
 		end,
@@ -717,7 +757,7 @@ local function assemble(src)
 			expr.data = expr.data.type
 
 			return "string"
-		end
+		end,
 	}
 
 	function expression(expr)
@@ -747,6 +787,13 @@ local function assemble(src)
 	for i, evt in ipairs(events) do
 		event(evt)
 	end
+
+	local vars = {}
+	for global in pairs(globals) do
+		vars[#vars + 1] = "0: " .. global
+	end
+
+	table.insert(out, 1, ("variables {\n\tglobal:\n\t\t%s\n}"):format(table.concat(vars, "\n\t\t")))
 
 	return table.concat(out, "\n\n")
 end
