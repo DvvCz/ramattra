@@ -51,6 +51,8 @@ local Functions = {
 
 	["format"] = { ow = "Custom String", args = { "string", "...any" } },
 
+
+
 	["Vector"] = { ow = "Vector", args = { "number", "number", "number" }, ret = "vector" },
 	["cross"] = { ow = "Cross Product", args = { "vector", "vector" }, ret = "vector" },
 	["dot"] = { ow = "Dot Product", args = { "vector", "vector" }, ret = "number" },
@@ -138,6 +140,30 @@ local Stringify = {
 	[ExprKind.Div] = function(expr)
 		return ("%s / %s"):format(expr.data[1], expr.data[2])
 	end,
+
+	[ExprKind.Eq] = function(expr)
+		return ("%s == %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.Neq] = function(expr)
+		return ("%s != %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.GreaterThan] = function(expr)
+		return ("%s > %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.GreaterThanOrEqual] = function(expr)
+		return ("%s >= %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.LessThan] = function(expr)
+		return ("%s < %s"):format(expr.data[1], expr.data[2])
+	end,
+
+	[ExprKind.LessThanOrEqual] = function(expr)
+		return ("%s <= %s"):format(expr.data[1], expr.data[2])
+	end
 }
 
 function Expr:__tostring()
@@ -313,8 +339,10 @@ local function parse(src)
 			return Expr.new(ExprKind.Mul, { prev, assert(expr(), "Expected rhs expression for multiplication") })
 		elseif consume("^%/") then
 			return Expr.new(ExprKind.Div, { prev, assert(expr(), "Expected rhs expression for division") })
-		elseif consume("^%==") then
+		elseif consume("^==") then
 			return Expr.new(ExprKind.Eq, { prev, assert(expr(), "Expected rhs expression for ==") })
+		elseif consume("^!=") then
+			return Expr.new(ExprKind.Neq, { prev, assert(expr(), "Expected rhs expression for !=") })
 		elseif consume("^%>=") then
 			return Expr.new(ExprKind.GreaterThanOrEqual, { prev, assert(expr(), "Expected rhs expression for >=") })
 		elseif consume("^%<=") then
@@ -590,6 +618,43 @@ local function assemble(src)
 			expression(expr.data[1])
 			expression(expr.data[2])
 			return expr.data[1].type
+		end,
+
+		[ExprKind.Eq] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+
+		[ExprKind.Neq] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.GreaterThan] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.GreaterThanOrEqual] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.LessThan] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
+		end,
+
+		[ExprKind.LessThanOrEqual] = function(expr)
+			expression(expr.data[1])
+			expression(expr.data[2])
+			return "boolean"
 		end,
 	}
 
