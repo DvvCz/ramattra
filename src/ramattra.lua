@@ -39,7 +39,7 @@ local Constants = {
 
 	["INVISIBLE_TO_ALL"] = { ow = "All", type = "invis" },
 	["INVISIBLE_TO_ENEMIES"] = { ow = "Enemies", type = "invis" },
-	["INVISIBLE_TO_NONE"] = { ow = "None", type = "invis" }
+	["INVISIBLE_TO_NONE"] = { ow = "None", type = "invis" },
 }
 
 local Functions = {
@@ -62,12 +62,11 @@ local Functions = {
 	-- ["setAbilityCooldown"] = { ow = "Set Ability Cooldown", args = { "player", "button", "number" } },
 	["setInvisible"] = { ow = "Set Invisible", args = { "player", "invis" } },
 
-
 	["Vector"] = { ow = "Vector", args = { "number", "number", "number" }, ret = "vector" },
 	["cross"] = { ow = "Cross Product", args = { "vector", "vector" }, ret = "vector" },
 	["dot"] = { ow = "Dot Product", args = { "vector", "vector" }, ret = "number" },
 
-	["pow"] = { ow = "Raise To Power", args = { "number", "number" } }
+	["pow"] = { ow = "Raise To Power", args = { "number", "number" }, ret = "number" },
 }
 
 local function map(t, f)
@@ -104,7 +103,7 @@ local ExprKind = {
 
 	Or = 19,
 	And = 20,
-	Not = 21
+	Not = 21,
 }
 
 ---@class Expr
@@ -191,7 +190,7 @@ local Stringify = {
 
 	[ExprKind.Not] = function(expr)
 		return ("Not(%s)"):format(expr.data)
-	end
+	end,
 }
 
 function Expr:__tostring()
@@ -302,6 +301,10 @@ local function parse(src)
 		return Expr.new(ExprKind.Array, args)
 	end
 
+	local function null()
+		return consume("^null") and Expr.new(ExprKind.Literal, { nil, "null" })
+	end
+
 	local function group()
 		if consume("^%(") then
 			local e = expr()
@@ -328,7 +331,7 @@ local function parse(src)
 	end
 
 	local function methodcall(exp)
-		local prev = number() or string() or bool() or array() or group() or call(exp) or ident()
+		local prev = number() or string() or bool() or array() or group() or null() or call(exp) or ident()
 		if not prev then
 			return
 		end
@@ -350,7 +353,7 @@ local function parse(src)
 	end
 
 	local function binop()
-		local prev = number() or string() or bool() or array() or group() or call(true) or methodcall(true) or ident()
+		local prev = methodcall(true)
 		if not prev then
 			return
 		end
@@ -395,17 +398,7 @@ local function parse(src)
 	end
 
 	function expr()
-		return binop()
-			or unop()
-			or number()
-			or string()
-			or bool()
-			or array()
-			or group()
-			or call(true)
-			or methodcall(true)
-			or ident()
-			or (consume("^(null)") and Expr.new(ExprKind.Literal, { nil, "null" }))
+		return binop() or unop()
 	end
 
 	local function declare()
@@ -441,7 +434,8 @@ local function parse(src)
 
 		local stmts = {}
 		while not consume("^}") do
-			while consume("^//[^\n]+\n") do end
+			while consume("^//[^\n]+\n") do
+			end
 			stmts[#stmts + 1] = assert(stmt(), "Expected statement to parse")
 		end
 
@@ -482,7 +476,7 @@ local function parse(src)
 end
 
 local function assemble(src)
-	local out = {"variables {\n\tglobal:\n\t\t0: Vars\n}"}
+	local out = { "variables {\n\tglobal:\n\t\t0: Vars\n}" }
 
 	local events = assert(parse(src))
 	local scopes, depth = { [0] = setmetatable({}, { __index = Constants }) }, 0
@@ -665,7 +659,6 @@ local function assemble(src)
 			return "boolean"
 		end,
 
-
 		[ExprKind.Neq] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
@@ -711,7 +704,7 @@ local function assemble(src)
 		[ExprKind.Not] = function(expr)
 			expression(expr.data)
 			return "boolean"
-		end
+		end,
 	}
 
 	function expression(expr)
