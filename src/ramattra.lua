@@ -104,6 +104,8 @@ local ExprKind = {
 	Or = 19,
 	And = 20,
 	Not = 21,
+
+	Typeof = 22
 }
 
 ---@class Expr
@@ -394,11 +396,13 @@ local function parse(src)
 	local function unop()
 		if consume("^!") then
 			return Expr.new(ExprKind.Not, assert(expr(), "Expected expression following ! for unary not operator"))
+		elseif consume("^typeof") then
+			return Expr.new(ExprKind.Typeof, assert(expr(), "Expected expression for typeof operator"))
 		end
 	end
 
 	function expr()
-		return binop() or unop()
+		return unop() or binop()
 	end
 
 	local function declare()
@@ -705,6 +709,15 @@ local function assemble(src)
 			expression(expr.data)
 			return "boolean"
 		end,
+
+		[ExprKind.Typeof] = function(expr)
+			expression(expr.data)
+
+			expr.kind = ExprKind.String
+			expr.data = expr.data.type
+
+			return "string"
+		end
 	}
 
 	function expression(expr)
