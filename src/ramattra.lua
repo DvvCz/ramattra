@@ -239,6 +239,7 @@ local StmtKind = {
 	Call = 3,
 	MethodCall = 4,
 	Declare = 5,
+	Assign = 6,
 }
 
 ---@class Stmt
@@ -279,6 +280,10 @@ local Stringify = {
 	end,
 
 	[StmtKind.Declare] = function(stmt)
+		return ("Set Global Variable At Index(Vars, %s, %s)"):format(stmt.ow and stmt.ow or stmt.data[1], stmt.data[2])
+	end,
+
+	[StmtKind.Assign] = function(stmt)
 		return ("Set Global Variable At Index(Vars, %s, %s)"):format(stmt.ow and stmt.ow or stmt.data[1], stmt.data[2])
 	end,
 }
@@ -474,6 +479,51 @@ local function parse(src)
 		return Stmt.new(StmtKind.Declare, { name, expr })
 	end
 
+	local function assign()
+		local prev = ptr
+
+		local name = consume("^([%w_]+)")
+		if not name or not consume("^=") then
+			ptr = prev
+			return
+		else
+			local expr = assert(expr(), "Expected expression for assignment")
+
+			return Stmt.new(StmtKind.Assign, { name, expr })
+		end
+	end
+
+	local function compound_assignment()
+		local prev = ptr
+
+		local name = consume("^([%w_]+)")
+		if not name then
+			ptr = prev
+		elseif consume("^%+=") then
+			return Stmt.new(
+				StmtKind.Assign,
+				{ name, Expr.new(ExprKind.Add, { Expr.new(ExprKind.Ident, name), assert(expr(), "Expected expression for assignment") }) }
+			)
+		elseif consume("^%-=") then
+			return Stmt.new(
+				StmtKind.Assign,
+				{ name, Expr.new(ExprKind.Sub, { Expr.new(ExprKind.Ident, name), assert(expr(), "Expected expression for assignment") }) }
+			)
+		elseif consume("^%*=") then
+			return Stmt.new(
+				StmtKind.Assign,
+				{ name, Expr.new(ExprKind.Mul, { Expr.new(ExprKind.Ident, name), assert(expr(), "Expected expression for assignment") }) }
+			)
+		elseif consume("^%/=") then
+			return Stmt.new(
+				StmtKind.Assign,
+				{ name, Expr.new(ExprKind.Div, { Expr.new(ExprKind.Ident, name), assert(expr(), "Expected expression for assignment") }) }
+			)
+		else
+			ptr = prev
+		end
+	end
+
 	local block
 	local function stmt()
 		return (
@@ -490,6 +540,8 @@ local function parse(src)
 				assert(block(), "Expected block after for statement"),
 			}))
 			or declare()
+			or assign()
+			or compound_assignment()
 			or call()
 			or methodcall()
 	end
@@ -579,7 +631,7 @@ local function assemble(src)
 	local function get(name)
 		for i = depth, 0, -1 do
 			if scopes[i][name] then
-				return scopes[i][name]
+				return scopes[i][name], i
 			end
 		end
 	end
@@ -667,6 +719,18 @@ local function assemble(src)
 			local ow = allocVar(stmt.data[1])
 			stmt.ow = ow
 			scopes[depth][stmt.data[1]] = { type = stmt.data[2].type, ow = "Value In Array(Global Variable(Vars), " .. ow .. ")" }
+		end,
+
+		[StmtKind.Assign] = function(stmt)
+			local var, scope_depth = get(stmt.data[1])
+			assert(var, "Unknown variable: " .. stmt.data[1])
+			assert(scope_depth ~= 0, "Cannot assign to constant values")
+
+			expression(stmt.data[2])
+			local ow = allocVar(stmt.data[1])
+			stmt.ow = ow
+
+			assert(var.type == stmt.data[2].type, "Cannot assign type " .. stmt.data[2].type .. " to variable of type " .. var.type)
 		end,
 	}
 
