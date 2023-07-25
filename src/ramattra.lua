@@ -76,20 +76,29 @@ local Functions = {
 	-- ["wait"] = { ow = "Wait", args = { "number" } },
 	["disableMessages"] = { ow = "Disable Messages", args = { "player" } },
 
-	["allPlayers"] = { ow = "All Players", args = { "team" }, ret = "array" },
+	["allPlayers"] = { ow = "All Players", args = { "team" }, ret = "array<player>" },
 
-	-- Most of these should be Player | Array when unions are supported.
-	["setAbility1Enabled"] = { ow = "Set Ability 1 Enabled", args = { "player", "boolean" } },
-	["setAbility2Enabled"] = { ow = "Set Ability 2 Enabled", args = { "player", "boolean" } },
+	["setAbility1Enabled"] = { ow = "Set Ability 1 Enabled", args = { "player|array<player>", "boolean" } },
+	["setAbility2Enabled"] = { ow = "Set Ability 2 Enabled", args = { "player|array<player>", "boolean" } },
 	-- ["setAbilityCharge"] = { ow = "Set Ability Charge", args = { "player", "button", "number" } },
 	-- ["setAbilityCooldown"] = { ow = "Set Ability Cooldown", args = { "player", "button", "number" } },
-	["setInvisible"] = { ow = "Set Invisible", args = { "player", "invis" } },
+	["setInvisible"] = { ow = "Set Invisible", args = { "player|array<player>", "invis" } },
 
 	["Vector"] = { ow = "Vector", args = { "number", "number", "number" }, ret = "vector" },
 	["cross"] = { ow = "Cross Product", args = { "vector", "vector" }, ret = "vector" },
 	["dot"] = { ow = "Dot Product", args = { "vector", "vector" }, ret = "number" },
 
 	["pow"] = { ow = "Raise To Power", args = { "number", "number" }, ret = "number" },
+}
+
+local Keywords = {
+	["let"] = true,
+	["for"] = true,
+	["if"] = true,
+	["typeof"] = true,
+	["true"] = true,
+	["false"] = true,
+	["null"] = true,
 }
 
 local function map(t, f)
@@ -155,7 +164,7 @@ local Stringify = {
 		return ("Custom String(%q)"):format(expr.data)
 	end,
 	[ExprKind.Array] = function(expr)
-		return ("Array(%s)"):format(table.concat(map(expr.data, tostring), ", "))
+		return ("Array(%s)"):format(table.concat(map(expr.data[2], tostring), ", "))
 	end,
 
 	[ExprKind.Ident] = function(expr)
@@ -169,8 +178,8 @@ local Stringify = {
 	[ExprKind.Index] = function(expr)
 		if expr.type == "string" then
 			return ("Char In String(%s, %s)"):format(expr.data[1], expr.data[2])
-		else
-			error("unreachable")
+		else -- array
+			return ("Value In Array(%s, %s)"):format(expr.data[1], expr.data[2])
 		end
 	end,
 
@@ -331,29 +340,30 @@ local function parse(src)
 
 	local function ident()
 		local match = consume("^([%w_]+)")
-		if match then
+		if match and not Keywords[match] then
 			return Expr.new(ExprKind.Ident, match)
 		end
 	end
 
 	local expr
 	local function array()
-		if not consume("^%[") then
+		local hint = consume("^%<([%w_]+)%>%[")
+		if not hint and not consume("^%[") then
 			return
 		end
 
 		local args = {}
 		if consume("^%]") then
-			return Expr.new(ExprKind.Array, args)
+			return Expr.new(ExprKind.Array, { hint, args })
 		end
 
 		repeat
 			args[#args + 1] = assert(expr(), "Expected expression for array")
-		until not consume(",")
+		until not consume("^,")
 
 		assert(consume("^%]"), "Expected ] to end array")
 
-		return Expr.new(ExprKind.Array, args)
+		return Expr.new(ExprKind.Array, { hint, args })
 	end
 
 	local function null()
@@ -592,13 +602,29 @@ local function parse(src)
 	end
 
 	local events = {}
-	consume("^%s+")
-	consume("^//[^\n]*\n")
-	while ptr <= len do
-		events[#events + 1] = assert(event())
+
+	local ok, err = pcall(function()
 		consume("^%s+")
 		consume("^//[^\n]*\n")
-		consume("^%s+")
+		while ptr <= len do
+			events[#events + 1] = assert(event(), "Expected event to parse")
+			consume("^%s+")
+			consume("^//[^\n]*\n")
+			consume("^%s+")
+		end
+
+		return events
+	end)
+
+	if not ok then
+		local slice = src:sub(1, ptr)
+
+		local _, line = slice:gsub("\n", "")
+
+		local start, finish = slice:match("\n()[^\n]+()$")
+		local char = finish - start
+
+		error(err .. " at line " .. line + 1 .. " char " .. char)
 	end
 
 	return events
@@ -746,9 +772,24 @@ local function assemble(src)
 		[ExprKind.Number] = function()
 			return "number"
 		end,
-		[ExprKind.Array] = function()
-			return "array"
+
+		[ExprKind.Array] = function(expr)
+			local ty = expr.data[1]
+			for i, arg in ipairs(expr.data[2]) do
+				expression(arg)
+
+				if ty == nil then
+					ty = arg.type
+				elseif ty ~= arg.type then
+					error("Cannot mix types in array")
+				end
+			end
+
+			assert(ty, "Need type hint for empty array")
+
+			return "array<" .. ty .. ">"
 		end,
+
 		[ExprKind.Boolean] = function()
 			return "boolean"
 		end,
@@ -819,12 +860,18 @@ local function assemble(src)
 
 		[ExprKind.Index] = function(expr)
 			expression(expr.data[1])
-			assert(expr.data[1].type == "string", "Can only index string type")
-
 			expression(expr.data[2])
+
 			assert(expr.data[2].type == "number", "Can only pass number type into indexing expression")
 
-			return "string"
+			local obj = expr.data[1]
+			if obj.type:sub(1, 5) == "array" then
+				return obj.type:sub(7, -2)
+			elseif obj.type == "string" then
+				return "string"
+			else
+				error("Can only index string and array types")
+			end
 		end,
 
 		[ExprKind.Add] = function(expr)
