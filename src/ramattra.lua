@@ -175,7 +175,11 @@ local Stringify = {
 	end,
 
 	[ExprKind.Add] = function(expr)
-		return ("Add(%s, %s)"):format(expr.data[1], expr.data[2])
+		if expr.data[1].type == "string" then
+			return ("Custom String(\"{0}{1}\", %s, %s)"):format(expr.data[1], expr.data[2])
+		else
+			return ("Add(%s, %s)"):format(expr.data[1], expr.data[2])
+		end
 	end,
 
 	[ExprKind.Sub] = function(expr)
@@ -826,25 +830,41 @@ local function assemble(src)
 		[ExprKind.Add] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return "number"
+
+			assert(expr.data[1].type == expr.data[2].type, "Cannot add differing types")
+			assert(expr.data[1].type == "number" or expr.data[1].type == "vector" or expr.data[1].type == "string", "Can only sum numbers, vectors and strings")
+
+			return expr.data[1].type
 		end,
 
 		[ExprKind.Sub] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return "number"
+
+			assert(expr.data[1].type == expr.data[2].type, "Cannot subtract differing types")
+			assert(expr.data[1].type == "number" or expr.data[1].type == "vector", "Can only subtract numbers and vectors")
+
+			return expr.data[1].type
 		end,
 
 		[ExprKind.Mul] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return "number"
+
+			assert(expr.data[1].type == expr.data[2].type, "Cannot multiply differing types")
+			assert(expr.data[1].type == "number" or expr.data[1].type == "vector", "Can only multiply numbers and vectors")
+
+			return expr.data[1].type
 		end,
 
 		[ExprKind.Div] = function(expr)
 			expression(expr.data[1])
 			expression(expr.data[2])
-			return "number"
+
+			assert(expr.data[1].type == expr.data[2].type, "Cannot divide differing types")
+			assert(expr.data[1].type == "number" or expr.data[1].type == "vector", "Can only divide numbers and vectors")
+
+			return expr.data[1].type
 		end,
 
 		[ExprKind.Eq] = function(expr)
