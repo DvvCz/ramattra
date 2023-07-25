@@ -1,5 +1,3 @@
--- types: string, number, boolean, null, team, player
-
 local Events = {
 	["client"] = { ow = "Ongoing - Each Player", params = { { "player", "Event Player" } } },
 	["server"] = { ow = "Ongoing - Global", params = {} },
