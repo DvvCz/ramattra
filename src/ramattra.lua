@@ -36,6 +36,10 @@ local Constants = {
 	["SPECTATOR_VISIBLE_DEFAULT"] = { ow = "Default Visibility", type = "visibility" },
 	["SPECTATOR_VISIBLE_ALWAYS"] = { ow = "Visible Always", type = "visibility" },
 	["SPECTATOR_VISIBLE_NEVER"] = { ow = "Visible Never", type = "visibility" },
+
+	["INVISIBLE_TO_ALL"] = { ow = "All", type = "invis" },
+	["INVISIBLE_TO_ENEMIES"] = { ow = "Enemies", type = "invis" },
+	["INVISIBLE_TO_NONE"] = { ow = "None", type = "invis" }
 }
 
 local Functions = {
@@ -51,6 +55,12 @@ local Functions = {
 
 	["format"] = { ow = "Custom String", args = { "string", "...any" } },
 
+	-- Most of these should be Player | Array when unions are supported.
+	["setAbility1Enabled"] = { ow = "Set Ability 1 Enabled", args = { "player", "boolean" } },
+	["setAbility2Enabled"] = { ow = "Set Ability 2 Enabled", args = { "player", "boolean" } },
+	-- ["setAbilityCharge"] = { ow = "Set Ability Charge", args = { "player", "button", "number" } },
+	-- ["setAbilityCooldown"] = { ow = "Set Ability Cooldown", args = { "player", "button", "number" } },
+	["setInvisible"] = { ow = "Set Invisible", args = { "player", "invis" } },
 
 
 	["Vector"] = { ow = "Vector", args = { "number", "number", "number" }, ret = "vector" },
