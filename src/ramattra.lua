@@ -73,7 +73,19 @@ local Functions = {
 
 	["createHUDText"] = {
 		ow = "Create HUD Text",
-		args = { "array<player>|player", "string", "string", "string", "hudpos", "number", "color", "color", "color", "hudeval", "visibility" },
+		args = {
+			"array<player>|player",
+			"string",
+			"string",
+			"string",
+			"hudpos",
+			"number",
+			"color",
+			"color",
+			"color",
+			"hudeval",
+			"visibility",
+		},
 	},
 
 	["lastTextID"] = {
@@ -232,7 +244,7 @@ local Stringify = {
 
 	[ExprKind.Add] = function(expr)
 		if expr.data[1].type == "string" then
-			return ("Custom String(\"{0}{1}\", %s, %s)"):format(expr.data[1], expr.data[2])
+			return ('Custom String("{0}{1}", %s, %s)'):format(expr.data[1], expr.data[2])
 		else
 			return ("Add(%s, %s)"):format(expr.data[1], expr.data[2])
 		end
@@ -926,7 +938,10 @@ local function assemble(src)
 			expression(expr.data[2])
 
 			assert(expr.data[1].type == expr.data[2].type, "Cannot add differing types")
-			assert(expr.data[1].type == "number" or expr.data[1].type == "vector" or expr.data[1].type == "string", "Can only sum numbers, vectors and strings")
+			assert(
+				expr.data[1].type == "number" or expr.data[1].type == "vector" or expr.data[1].type == "string",
+				"Can only sum numbers, vectors and strings"
+			)
 
 			return expr.data[1].type
 		end,
