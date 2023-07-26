@@ -5,6 +5,11 @@ A language written in lua that compiles to [Overwatch Workshop Scripts](https://
 ## Example
 
 ```rs
+function killThemAll() {
+	let players = TEAM_ALL.allPlayers()
+	players.setHealth(0)
+}
+
 event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variables from events
 	let players = [victim, attacker]
 
@@ -30,5 +35,7 @@ event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variab
 	for i in 0..5 { // For loop
 		let num = numbers[i]
 	}
+
+	killThemAll()
 }
 ```
