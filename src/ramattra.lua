@@ -271,7 +271,11 @@ local Stringify = {
 	end,
 
 	[ExprKind.Call] = function(expr)
-		return ("%s(%s)"):format(Functions[expr.data[1]].ow, table.concat(map(expr.data[2], tostring), ", "))
+		if expr.macro then
+			return expr.macro:format(table.concat(map(expr.data[2], tostring), ", "))
+		else
+			return ("%s(%s)"):format(expr.ow, table.concat(map(expr.data[2], tostring), ", ") )
+		end
 	end,
 
 	[ExprKind.Index] = function(expr)
@@ -346,12 +350,13 @@ end
 ---@enum StmtKind
 local StmtKind = {
 	Event = 0,
-	If = 1,
-	For = 2,
-	Call = 3,
-	MethodCall = 4,
-	Declare = 5,
-	Assign = 6,
+	Function = 1,
+	If = 2,
+	For = 3,
+	Call = 4,
+	MethodCall = 5,
+	Declare = 6,
+	Assign = 7,
 }
 
 ---@class Stmt
@@ -373,7 +378,11 @@ local Stringify = {
 	end,
 
 	[StmtKind.Call] = function(stmt)
-		return ("%s(%s)"):format(Functions[stmt.data[1]].ow, table.concat(map(stmt.data[2], tostring), ", "))
+		if stmt.macro then
+			return stmt.macro:format(table.concat(map(stmt.data[2], tostring), ", "))
+		else
+			return ("%s(%s)"):format(stmt.ow, table.concat(map(stmt.data[2], tostring), ", ") )
+		end
 	end,
 
 	[StmtKind.If] = function(stmt)
@@ -398,6 +407,10 @@ local Stringify = {
 	[StmtKind.Assign] = function(stmt)
 		return ("Set Global Variable At Index(Vars, %s, %s)"):format(stmt.ow and stmt.ow or stmt.data[1], stmt.data[2])
 	end,
+
+	[StmtKind.Function] = function(stmt)
+		return nil
+	end
 }
 
 function Stmt:__tostring()
@@ -661,7 +674,7 @@ local function parse(src)
 
 	function block()
 		if not consume("^{") then
-			return
+			return nil
 		end
 
 		local stmts = {}
@@ -681,7 +694,7 @@ local function parse(src)
 	end
 
 	local function event()
-		if not consume("^(event)") then
+		if not consume("^event") then
 			return nil
 		end
 
@@ -700,19 +713,43 @@ local function parse(src)
 		return Stmt.new(StmtKind.Event, { name, params, assert(block()) })
 	end
 
-	local events = {}
+	local function fn()
+		if not consume("^function") then
+			return nil
+		end
+
+		local name = assert(consume("^([%w_]+)"), "Expected name after function keyword")
+
+		assert(consume("^%("))
+
+		local params = {}
+		if not consume("^%)") then
+			repeat
+				params[#params + 1] = {
+					assert(consume("^(%w+)"), "Expected param name"),
+					assert(consume("^:") and consume("^(%w+)"), "Expected :type after parameter name"),
+				}
+			until not consume("^,")
+
+			assert(consume("^%)"))
+		end
+
+		return Stmt.new(StmtKind.Function, { name, params, assert(block(), "Expected block for function") })
+	end
+
+	local statements = {}
 
 	local ok, err = pcall(function()
 		consume("^%s+")
 		consume("^//[^\n]*\n")
 		while ptr <= len do
-			events[#events + 1] = assert(event(), "Expected event to parse")
+			statements[#statements + 1] = assert(event() or fn(), "Expected event or function to parse")
 			consume("^%s+")
 			consume("^//[^\n]*\n")
 			consume("^%s+")
 		end
 
-		return events
+		return statements
 	end)
 
 	if not ok then
@@ -721,19 +758,21 @@ local function parse(src)
 		local _, line = slice:gsub("\n", "")
 
 		local start, finish = slice:match("\n()[^\n]+()$")
-		local char = finish - start
+		local char = finish and finish - start or ptr
 
 		error(err .. " at line " .. line + 1 .. " char " .. char)
 	end
 
-	return events
+	return statements
 end
 
 local function assemble(src)
 	local out, globals = {}, { Vars = true }
 
-	local events = assert(parse(src))
+	local statements = parse(src)
 	local scopes, depth = { [0] = setmetatable({}, { __index = Constants }) }, 0
+
+	local functions = setmetatable({}, { __index = Functions })
 
 	local flatvars, nflatvars = {}, 0
 
@@ -769,7 +808,10 @@ local function assemble(src)
 
 	local Statements = {
 		[StmtKind.Call] = function(stmt)
-			local fn = assert(Functions[stmt.data[1]], "No such function: " .. stmt.data[1])
+			local fn = assert(functions[stmt.data[1]], "No such function: " .. stmt.data[1])
+
+			stmt.ow = fn.ow
+			stmt.macro = fn.macro
 
 			if #stmt.data[2] < #fn.args then
 				error("Incorrect # of arguments passed to " .. stmt.data[1] .. " expected at least " .. #fn.args .. " arguments")
@@ -812,6 +854,24 @@ local function assemble(src)
 			for _, stmt in ipairs(stmt.data[2]) do
 				statement(stmt)
 			end
+			popScope()
+		end,
+
+		[StmtKind.Event] = function(stmt)
+			pushScope()
+
+			local event = assert(Events[stmt.data[1]], "Unknown event: " .. stmt.data[1])
+
+			assert(#event.params == #stmt.data[2], "Event " .. stmt.data[1] .. " has " .. #event.params .. " parameters.")
+
+			for i, param in ipairs(stmt.data[2]) do
+				scopes[depth][param] = { type = event.params[i][1], ow = event.params[i][2] }
+			end
+
+			for i, stmt in ipairs(stmt.data[3]) do
+				statement(stmt)
+			end
+
 			popScope()
 		end,
 
@@ -861,6 +921,19 @@ local function assemble(src)
 
 			assert(var.type == stmt.data[2].type, "Cannot assign type " .. stmt.data[2].type .. " to variable of type " .. var.type)
 		end,
+
+		[StmtKind.Function] = function(stmt)
+			local buf = {}
+			for i, stmt in ipairs(stmt.data[3]) do
+				statement(stmt)
+				buf[i] = tostring(stmt)
+			end
+
+			functions[stmt.data[1]] = {
+				args = {},
+				macro = table.concat(buf, ";\n")
+			}
+		end
 	}
 
 	function statement(stmt)
@@ -910,6 +983,8 @@ local function assemble(src)
 
 		[ExprKind.Call] = function(expr)
 			local fn = assert(Functions[expr.data[1]], "Unknown function " .. expr.data[1])
+
+			expr.ow = fn.ow
 			if #expr.data[2] < #fn.args then
 				error("Incorrect # of arguments passed to " .. expr.data[1] .. " expected at least " .. #fn.args .. " arguments")
 			end
@@ -1083,28 +1158,9 @@ local function assemble(src)
 		expr.type = assert(Expressions[expr.kind](expr), "Cannot use void return as expression")
 	end
 
-	local function event(evt)
-		pushScope()
-
-		local event = assert(Events[evt.data[1]], "Unknown event: " .. evt.data[1])
-
-		assert(#event.params == #evt.data[2], "Event " .. evt.data[1] .. " has " .. #event.params .. " parameters.")
-
-		for i, param in ipairs(evt.data[2]) do
-			scopes[depth][param] = { type = event.params[i][1], ow = event.params[i][2] }
-		end
-
-		for i, stmt in ipairs(evt.data[3]) do
-			statement(stmt)
-		end
-
-		out[#out + 1] = tostring(evt)
-
-		popScope()
-	end
-
-	for i, evt in ipairs(events) do
-		event(evt)
+	for i, stmt in ipairs(statements) do
+		statement(stmt)
+		out[#out + 1] = tostring(stmt)
 	end
 
 	local vars = {}
