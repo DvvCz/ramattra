@@ -85,6 +85,11 @@ const App = () => {
 				height: 100dvh;
 
 				font-family: 'Inter', sans-serif;
+
+				--color-ram: #713dc5;
+				--color-toolbar: #313131;
+				--color-output: #111111;
+				--color-input: #1e1e1e;
 			}
 
 			.top {
@@ -92,7 +97,7 @@ const App = () => {
 				flex-direction: row;
 				align-items: center;
 
-				background-color: #6c2fc8;
+				background-color: var(--color-ram);
 				height: 7%;
 
 				.logo {
@@ -100,6 +105,7 @@ const App = () => {
 					display: flex;
 					flex-direction: row;
 					width: 25%;
+					min-width: 400px;
 
 					& button {
 						color: white;
@@ -116,7 +122,7 @@ const App = () => {
 							text-decoration: none;
 
 							&:hover {
-								color: rgba(255, 255, 255, 0.7);
+								filter: opacity(70%);
 							}
 						}
 					}
@@ -156,7 +162,7 @@ const App = () => {
 							}
 
 							&:hover {
-								color: rgba(255, 255, 255, 0.7);
+								filter: opacity(70%);
 							}
 						}
 					}
@@ -179,9 +185,10 @@ const App = () => {
 					.toolbar {
 						display: flex;
 						flex-direction: row;
+
 						margin-bottom: 1%;
 
-						background-color: #313131;
+						background-color: var(--color-toolbar);
 						border-bottom: 1px solid white;
 
 						height: 6%;
@@ -204,7 +211,7 @@ const App = () => {
 							}
 
 							&:hover {
-								background-color: #3D3D3D;
+								backdrop-filter: brightness(120%);
 								border-bottom: 2px solid white;
 							}
 						}
@@ -213,7 +220,7 @@ const App = () => {
 					.input {
 						height: 94%;
 						outline: none;
-						background-color: #1e1e1e;
+						background-color: var(--color-input);
 						color: white;
 						border: none;
 						resize: none;
@@ -229,7 +236,7 @@ const App = () => {
 
 					.top {
 						height: 6%;
-						background-color: #313131;
+						background-color: var(--color-toolbar);
 						margin-top: 2%;
 						margin-bottom: 8%;
 						color: white;
@@ -241,7 +248,7 @@ const App = () => {
 
 						outline: none;
 
-						background-color: #111111;
+						background-color: var(--color-output);
 						color: white;
 						font-size: smaller;
 						overflow-x: scroll;
@@ -258,7 +265,7 @@ const App = () => {
 					& button {
 						border: none;
 						border-radius: 3px;
-						background-color: #6c2fc8;
+						background-color: var(--color-ram);
 						color: white;
 
 						padding: 10px 10px 10px 10px;
@@ -266,7 +273,7 @@ const App = () => {
 						cursor: pointer;
 
 						&:active {
-							background-color: #5f29af;
+							filter: brightness(85%);
 						}
 					}
 				}
