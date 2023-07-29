@@ -409,7 +409,7 @@ local Stringify = {
 	end,
 
 	[StmtKind.Function] = function(stmt)
-		return nil
+		return ""
 	end
 }
 
@@ -926,7 +926,12 @@ local function assemble(src)
 			local buf = {}
 			for i, stmt in ipairs(stmt.data[3]) do
 				statement(stmt)
-				buf[i] = tostring(stmt)
+
+				-- For Lua 5.3.4+
+				local s = tostring(stmt)
+				if s ~= "" then
+					buf[i] = s
+				end
 			end
 
 			functions[stmt.data[1]] = {
@@ -1160,7 +1165,12 @@ local function assemble(src)
 
 	for i, stmt in ipairs(statements) do
 		statement(stmt)
-		out[#out + 1] = tostring(stmt)
+
+		-- For Lua 5.3.4+
+		local s = tostring(stmt)
+		if s ~= "" then
+			out[#out + 1] = s
+		end
 	end
 
 	local vars = {}

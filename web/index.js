@@ -1,15 +1,69 @@
 import { html, render, useState } from "https://unpkg.com/htm/preact/standalone.module.js";
 
 const urlParams = new URLSearchParams(window.location.search);
-const defaultCode = urlParams.get("code") ?? "let x = 5;";
+const defaultCode = urlParams.get("code") ?? `function killThemAll() {
+	let players = TEAM_ALL.allPlayers()
+	players.setHealth(0)
+}
+
+event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variables from events
+	let players = [victim, attacker]
+
+	players.setInvisible(INVISIBLE_TO_ALL) // Enums as constants
+	players.createHUDText(
+		"Header",
+		"Subheader",
+		"Text",
+
+		HUD_LEFT,
+		2,
+
+		COLOR_RED,
+		COLOR_WHITE,
+		COLOR_BLUE,
+
+		HUDEVAL_NONE,
+		SPECTATOR_VISIBLE_DEFAULT
+	)
+
+	let numbers = <number>[1, 2, 3, 4, 5] // Can annotate array type
+
+	for i in 0..5 { // For loop
+		let num = numbers[i]
+	}
+
+	killThemAll()
+}`;
 
 const App = () => {
 	const [inCode, setInCode] = useState(defaultCode);
 	const [outCode, setOutCode] = useState("");
 
+	const lua = fengari.lua;
+	const lauxlib  = fengari.lauxlib;
+	const lualib   = fengari.lualib;
+
+	const L = lauxlib.luaL_newstate();
+	lualib.luaL_openlibs(L);
+
+	if (lauxlib.luaL_dofile(L, fengari.to_luastring("../src/ramattra.lua")) != 0) {
+		const msg = fengari.to_jsstring( lua.lua_tostring(L, -1) );
+		lua.lua_pop(L, 1);
+
+		console.error(`Failed to load main ramattra lua file: ${ msg }`);
+	}
+
 	function compile() {
-		console.log("compile", inCode);
-		setOutCode("Compiled!");
+		lua.lua_pushstring(L, fengari.to_luastring(inCode));
+		if (lua.lua_pcall(L, 1, -1, 0) == 0) {
+			setOutCode(fengari.to_jsstring(lua.lua_tostring(L, -1)));
+			lua.lua_pop(L, 1);
+		} else {
+			const msg = lua.lua_tostring(L, -1);
+			lua.lua_pop(L, 1);
+
+			setOutCode(`Failed: ${ fengari.to_jsstring(msg) }`);
+		}
 	}
 
 	function overrideTab(e) {
@@ -17,12 +71,12 @@ const App = () => {
 			e.preventDefault();
 			const start = e.target.selectionStart;
 			const end = e.target.selectionEnd;
-			e.target.value = e.target.value.substring(0, start) + "\t" + e.target.value.substring(end	);
+			e.target.value = e.target.value.substring(0, start) + "\t" + e.target.value.substring(end);
 			e.target.selectionStart = e.target.selectionEnd = start + 1;
 		}
 	}
 
-	return html `
+	return html`
 		<div class="top">
 			<div class="logo">
 				<button>
@@ -53,7 +107,7 @@ const App = () => {
 					<button onclick=${e => navigator.clipboard.writeText(window.location.href)}>Share</button>
 				</div>
 
-				<textarea onkeydown=${overrideTab} onchange=${e => setInCode(e.target.value)} class="input">
+				<textarea onkeydown=${overrideTab} onchange=${e => setInCode(e.target.value)} spellcheck=false class="input">
 					${defaultCode}
 				</textarea>
 			</div>
@@ -63,11 +117,11 @@ const App = () => {
 					<div>Workshop Output</div>
 				</div>
 
-				<textarea class="output" placeholder="Compile some code!" readonly>
+				<textarea class="output" placeholder="Compile some code!" wrap="soft" readonly>
 					${outCode}
 				</textarea>
 
-				<button onclick=${ e => navigator.clipboard.writeText(outCode) }>
+				<button onclick=${e => navigator.clipboard.writeText(outCode)}>
 					Copy to Clipboard
 				</button>
 			</div>
@@ -238,13 +292,13 @@ const App = () => {
 						height: 6%;
 						background-color: var(--color-toolbar);
 						margin-top: 2%;
-						margin-bottom: 8%;
+						margin-bottom: 6%;
 						color: white;
 					}
 
 					.output {
-						width: 80%;
-						min-height: 30%;
+						width: 90%;
+						min-height: 60%;
 
 						outline: none;
 
@@ -252,13 +306,13 @@ const App = () => {
 						color: white;
 						font-size: smaller;
 						overflow-x: scroll;
+						overflow-y: clip;
 
-						margin-left: 5%;
-						margin-right: 5%;
+						margin-left: 3%;
+						margin-right: 3%;
 
 						margin-bottom: 5%;
 
-						scrollbar-color: black, black;
 						resize: none;
 					}
 
@@ -282,4 +336,4 @@ const App = () => {
 	`;
 };
 
-render(html `<${App} />`, document.body);
+render(html`<${App} />`, document.body);
