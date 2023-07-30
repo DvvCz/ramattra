@@ -1,7 +1,7 @@
 import { html, render, useState } from "https://unpkg.com/htm/preact/standalone.module.js";
 
 const urlParams = new URLSearchParams(window.location.search);
-const defaultCode = urlParams.get("code") ?? `function killThemAll() {
+const defaultCode = urlParams.has("code") ? decodeURIComponent(urlParams.get("code")) : `function killThemAll() {
 	let players = TEAM_ALL.allPlayers()
 	players.setHealth(0)
 }
@@ -39,6 +39,9 @@ const App = () => {
 	const [inCode, setInCode] = useState(defaultCode);
 	const [outCode, setOutCode] = useState("");
 
+	const [popupVisible, setPopupVisible] = useState("hidden");
+	const [popupMessage, setPopupMessage] = useState("");
+
 	const lua = fengari.lua;
 	const lauxlib  = fengari.lauxlib;
 	const lualib   = fengari.lualib;
@@ -54,16 +57,27 @@ const App = () => {
 	}
 
 	function compile() {
+
 		lua.lua_pushstring(L, fengari.to_luastring(inCode));
 		if (lua.lua_pcall(L, 1, -1, 0) == 0) {
 			setOutCode(fengari.to_jsstring(lua.lua_tostring(L, -1)));
 			lua.lua_pop(L, 1);
+
+			setPopupMessage("Successfully compiled code");
+			setPopupVisible("visible");
 		} else {
 			const msg = lua.lua_tostring(L, -1);
 			lua.lua_pop(L, 1);
 
 			setOutCode(`Failed: ${ fengari.to_jsstring(msg) }`);
+
+			setPopupMessage("Failed to compile code");
+			setPopupVisible("visible");
 		}
+
+		setTimeout(() => {
+			setPopupVisible("hidden");
+		}, 500);
 	}
 
 	function overrideTab(e) {
@@ -74,6 +88,18 @@ const App = () => {
 			e.target.value = e.target.value.substring(0, start) + "\t" + e.target.value.substring(end);
 			e.target.selectionStart = e.target.selectionEnd = start + 1;
 		}
+	}
+
+	function share() {
+		const baseUrl = window.location.href.split('?')[0];
+		const encoded = encodeURIComponent(inCode);
+		navigator.clipboard.writeText(`${baseUrl}?code=${encoded}`);
+
+		setPopupMessage("URL copied to clipboard");
+		setPopupVisible("visible");
+		setTimeout(() => {
+			setPopupVisible("hidden");
+		}, 500);
 	}
 
 	return html`
@@ -104,7 +130,7 @@ const App = () => {
 			<div class="editor">
 				<div class="toolbar">
 					<button onclick=${compile}>Compile</button>
-					<button onclick=${e => navigator.clipboard.writeText(window.location.href)}>Share</button>
+					<button onclick=${share}>Share</button>
 				</div>
 
 				<textarea onkeydown=${overrideTab} onchange=${e => setInCode(e.target.value)} spellcheck=false class="input">
@@ -125,6 +151,10 @@ const App = () => {
 					Copy to Clipboard
 				</button>
 			</div>
+		</div>
+
+		<div class="popup">
+			${popupMessage}
 		</div>
 
 		<style>
@@ -331,6 +361,34 @@ const App = () => {
 						}
 					}
 				}
+			}
+
+			.popup {
+				visibility: ${ popupVisible };
+
+				position: absolute;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: 30px;
+
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+
+				background-color: rgba(0, 0, 0, 0.6);
+				color: white;
+				font-size: 30px;
+
+				margin-left: auto;
+				margin-right: auto;
+				margin-top: auto;
+				margin-bottom: auto;
+
+				width: 30%;
+				overflow: auto;
+				height: 10%;
 			}
 		</style>
 	`;
