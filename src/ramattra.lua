@@ -440,7 +440,7 @@ local function parse(src)
 	end
 
 	local function string()
-		local match = consume('^"([^"]+)"')
+		local match = consume('^"([^"]*)"')
 		if match then
 			return Expr.new(ExprKind.String, match)
 		end
