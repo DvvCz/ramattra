@@ -38,7 +38,7 @@ jobs:
 
       - name: Include Ramattra
         run: |
-            mv ./packages/ramattra/src/ramattra.lua ./packages/ramattra-playground/
+            mv ./packages/ramattra/src/ramattra.lua ./packages/ramattra-playground/src/ramattra.lua
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
