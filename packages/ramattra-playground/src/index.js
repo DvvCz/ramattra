@@ -49,7 +49,7 @@ const App = () => {
 	const L = lauxlib.luaL_newstate();
 	lualib.luaL_openlibs(L);
 
-	if (lauxlib.luaL_dofile(L, fengari.to_luastring("../src/ramattra.lua")) != 0) {
+	if (lauxlib.luaL_dofile(L, fengari.to_luastring("../../ramattra/src/ramattra.lua")) != 0) {
 		const msg = fengari.to_jsstring( lua.lua_tostring(L, -1) );
 		lua.lua_pop(L, 1);
 
@@ -77,7 +77,7 @@ const App = () => {
 
 		setTimeout(() => {
 			setPopupVisible("hidden");
-		}, 500);
+		}, 900);
 	}
 
 	function overrideTab(e) {
@@ -99,7 +99,7 @@ const App = () => {
 		setPopupVisible("visible");
 		setTimeout(() => {
 			setPopupVisible("hidden");
-		}, 500);
+		}, 900);
 	}
 
 	return html`

@@ -1,4 +1,4 @@
-local assemble = require("src.ramattra")
+local assemble = require("packages.ramattra.src.ramattra")
 
 local function unindent(by, str)
 	return (str:gsub(("\t"):rep(by), ""))
