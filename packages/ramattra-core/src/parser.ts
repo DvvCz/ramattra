@@ -3,7 +3,7 @@ import * as peggy from "peggy";
 /**
  * Grammar for PeggyJS
  */
-const Grammar = `
+const Parser = peggy.generate(`
 Top =
 	(Function / Event)*
 
@@ -22,6 +22,10 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return ["if", cond, block] }
 	/ "for" _ marker:ident _ "in" _ start:Expr ".." end:Expr _ block:Block { return ["for", marker, start, end] }
 	/ "while" _ cond:Expr _ block:Block { return ["while", cond, block] }
+	/ "let" _ name:ident _ "=" _ value:Expr { return ["let", name, value] }
+	/ name:ident _ "=" _ value:Expr { return ["assign", name, value] }
+	/ tname:ident "." mname:ident "(" args: Expr|.., _ "," _| ")" { return ["methodcall", tname, mname, args] }
+	/ name:ident "(" args: Expr|.., _ "," _| ")" { return ["call", name, args] }
 
 BaseExpr =
 	"(" _ @Expr _ ")"
@@ -32,7 +36,10 @@ BaseExpr =
 	/ '"' inner:[^"]+ '"' { return ["string", inner.join("")] }
 	/ ( "true" / "false" ) { return ["boolean", text() == "true"] }
 	/ ("<" type:ident ">")? "[" items:Expr|.., _ "," _| "]" { return ["array", type, items] }
-	/ [0-9]+.[0.9]+ { return ["float", parseFloat(text())] }
+	/ [0-9]+ "." [0-9]+ { return ["float", parseFloat(text())] }
+	/ "0b" [0-1]+ { return ["int", parseInt(text().substring(2), 2)] }
+	/ "0o" [0-1]+ { return ["int", parseInt(text().substring(2), 8)] }
+	/ "0x" [0-1]+ { return ["int", parseInt(text().substring(2), 16)] }
 	/ [0-9]+ { return ["int", parseInt(text())] }
 
 Expr =
@@ -56,9 +63,7 @@ ident "identifier" =
 
 _ "whitespace" =
 	[ \\t\\n\\r]* ("/*" (!("*/") .)* "*/")* ("//" [^\\n]+ "\\n")*
-`;
-
-const Parser = peggy.generate(Grammar);
+`);
 
 export type Block = Statement[];
 
@@ -80,5 +85,15 @@ export type Function = ["function", string, string[], Block];
 export type Event = ["event", string, string[], Block];
 
 export default function parse(src: string): (Function | Event)[] {
-	return Parser.parse(src);
+	try {
+		return Parser.parse(src, { grammarSource: "input.ram" });
+	} catch (e: any) {
+		if (typeof e.format == "function") {
+			throw e.format([
+				{ source: "input.ram", text: src }
+			])
+		} else {
+			throw e;
+		}
+	}
 }

@@ -40,7 +40,7 @@ export default function assemble(src: string): string {
 						All;
 					}
 					actions {
-						${ block.map(statement).join("\n") }
+						${ block.map(statement).join("\n\t") }
 					}
 				}`
 			);
