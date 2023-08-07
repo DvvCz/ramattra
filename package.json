@@ -1,0 +1,16 @@
+{
+	"name": "ramattra",
+	"author": "David Cruz",
+	"description": "A language written in lua that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).",
+	"version": "0.1.0",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"build": "tsc -b tsconfig.build.json"
+	},
+	"workspaces": [
+		"packages/*"
+	],
+	"devDependencies": {
+		"typescript": "^5.1.6"
+	}
+}

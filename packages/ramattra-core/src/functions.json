@@ -1,0 +1,10 @@
+{
+	"disableGameModeHUD": {
+		"ow": "Disable Game Mode HUD",
+		"args": [
+			{
+				"type": "player"
+			}
+		]
+	}
+}
