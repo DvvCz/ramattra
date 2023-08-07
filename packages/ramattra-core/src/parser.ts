@@ -5,7 +5,7 @@ import * as peggy from "peggy";
  */
 const Parser = peggy.generate(`
 Top =
-	(Function / Event)*
+	@(Function / Event)|.., _|
 
 Function = "function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block {
 	return ["function", name, params, block]
@@ -24,23 +24,22 @@ Stmt =
 	/ "while" _ cond:Expr _ block:Block { return ["while", cond, block] }
 	/ "let" _ name:ident _ "=" _ value:Expr { return ["let", name, value] }
 	/ name:ident _ "=" _ value:Expr { return ["assign", name, value] }
-	/ tname:ident "." mname:ident "(" args: Expr|.., _ "," _| ")" { return ["methodcall", tname, mname, args] }
-	/ name:ident "(" args: Expr|.., _ "," _| ")" { return ["call", name, args] }
+	/ obj:BaseExpr "." mname:ident "(" args:Expr|.., _ "," _| ")" { return ["methodcall", obj, mname, args] }
+	/ name:ident "(" args:Expr|.., _ "," _| ")" { return ["call", name, args] }
 
 BaseExpr =
 	"(" _ @Expr _ ")"
 	/ "!" expr:Expr { return ["not", expr] }
 	/ "typeof" expr:Expr { return ["typeof", expr] }
-	/ tname:ident "." mname:ident "(" args: Expr|.., _ "," _| ")" { return ["methodcall", tname, mname, args] }
-	/ name:ident "(" args: Expr|.., _ "," _| ")" { return ["call", name, args] }
 	/ '"' inner:[^"]+ '"' { return ["string", inner.join("")] }
 	/ ( "true" / "false" ) { return ["boolean", text() == "true"] }
-	/ ("<" type:ident ">")? "[" items:Expr|.., _ "," _| "]" { return ["array", type, items] }
+	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return ["array", type, items] }
 	/ [0-9]+ "." [0-9]+ { return ["float", parseFloat(text())] }
 	/ "0b" [0-1]+ { return ["int", parseInt(text().substring(2), 2)] }
 	/ "0o" [0-1]+ { return ["int", parseInt(text().substring(2), 8)] }
 	/ "0x" [0-1]+ { return ["int", parseInt(text().substring(2), 16)] }
 	/ [0-9]+ { return ["int", parseInt(text())] }
+	/ ident:ident { return ["ident", ident] }
 
 Expr =
 	lhs:BaseExpr _ "+" _ rhs:BaseExpr { return ["add", lhs, rhs] }
@@ -56,13 +55,21 @@ Expr =
 	/ lhs:BaseExpr _ "||" _ rhs:BaseExpr { return ["or", lhs, rhs] }
 	/ lhs:BaseExpr _ "&&" _ rhs:BaseExpr { return ["and", lhs, rhs] }
 	/ obj:BaseExpr "[" _ index:BaseExpr _ "]" { return ["index", obj, index] }
+	/ obj:BaseExpr "." mname:ident "(" args:Expr|.., _ "," _| ")" { return ["methodcall", obj, mname, args] }
+	/ name:ident "(" args:Expr|.., _ "," _| ")" { return ["call", name, args] }
 	/ BaseExpr
 
 ident "identifier" =
 	[a-zA-Z][a-zA-Z0-9_]* { return text() }
 
-_ "whitespace" =
-	[ \\t\\n\\r]* ("/*" (!("*/") .)* "*/")* ("//" [^\\n]+ "\\n")*
+comment "comment" =
+	("/*" (!("*/") .)* "*/") / ("//" [^\\n]+ "\\n")
+
+ws "whitespace" =
+	[ \\t\\n\\r]+
+
+_ =
+	(ws / comment)*
 `);
 
 export type Block = Statement[];
