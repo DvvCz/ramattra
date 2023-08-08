@@ -1,9 +1,11 @@
 import * as peggy from "peggy";
 
+const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(template));
+
 /**
  * Grammar for PeggyJS
  */
-const Parser = peggy.generate(`
+const Parser = peg`
 Top =
 	@(Function / Event)|.., _|
 
@@ -24,8 +26,8 @@ Stmt =
 	/ "while" _ cond:Expr _ block:Block { return ["while", cond, block] }
 	/ "let" _ name:ident _ "=" _ value:Expr { return ["let", name, value] }
 	/ name:ident _ "=" _ value:Expr { return ["assign", name, value] }
-	/ obj:BaseExpr "." mname:ident "(" args:Expr|.., _ "," _| ")" { return ["methodcall", obj, mname, args] }
-	/ name:ident "(" args:Expr|.., _ "," _| ")" { return ["call", name, args] }
+	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["methodcall", obj, mname, args] }
+	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", name, args] }
 
 BaseExpr =
 	"(" _ @Expr _ ")"
@@ -55,22 +57,22 @@ Expr =
 	/ lhs:BaseExpr _ "||" _ rhs:BaseExpr { return ["or", lhs, rhs] }
 	/ lhs:BaseExpr _ "&&" _ rhs:BaseExpr { return ["and", lhs, rhs] }
 	/ obj:BaseExpr "[" _ index:BaseExpr _ "]" { return ["index", obj, index] }
-	/ obj:BaseExpr "." mname:ident "(" args:Expr|.., _ "," _| ")" { return ["methodcall", obj, mname, args] }
-	/ name:ident "(" args:Expr|.., _ "," _| ")" { return ["call", name, args] }
+	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["methodcall", obj, mname, args] }
+	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", name, args] }
 	/ BaseExpr
 
 ident "identifier" =
 	[a-zA-Z][a-zA-Z0-9_]* { return text() }
 
 comment "comment" =
-	("/*" (!("*/") .)* "*/") / ("//" [^\\n]+ "\\n")
+	("/*" (!("*/") .)* "*/") / ("//" [^\n]+ "\n")
 
 ws "whitespace" =
-	[ \\t\\n\\r]+
+	[ \t\n\r]+
 
 _ =
 	(ws / comment)*
-`);
+`;
 
 export type Block = Statement[];
 

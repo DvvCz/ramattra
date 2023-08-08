@@ -1,13 +1,10 @@
 {
 	"compilerOptions": {
-		"module": "CommonJS",
-		"target": "ES2019",
-		"composite": true,
+		"module": "ESNext",
+		"moduleResolution": "Node",
+		"target": "ESNext",
 		"strict": true,
 		"declaration": true,
-		"sourceMap": true,
-		"skipLibCheck": true,
-		"moduleResolution": "node",
-		"esModuleInterop": true
+		"sourceMap": true
 	}
 }

@@ -3,7 +3,7 @@
 
 	"compilerOptions": {
 		"rootDir": "src",
-		"resolveJsonModule": true,
+		"composite": true,
 		"outDir": "lib"
 	},
 

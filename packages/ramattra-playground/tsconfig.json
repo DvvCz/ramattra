@@ -2,14 +2,14 @@
 	"extends": "../../tsconfig.json",
 
 	"compilerOptions": {
-		"allowJs": true,
 		"noEmit": true,
-		"allowSyntheticDefaultImports": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "preact"
 	},
 
-	"references": [{"path": "../ramattra-core"}],
-
-	"include": ["src"]
+	"references": [
+		{
+			"path": "../ramattra-core"
+		}
+	]
 }
