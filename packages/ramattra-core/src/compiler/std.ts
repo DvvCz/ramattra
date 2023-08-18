@@ -1,4 +1,4 @@
-export const EVENTS: Record<string, { ow: string, args: [ string, string ][] }> = {
+export const EVENTS: Record<string, { ow: string, args: [string, string][] }> = {
 	"client": {
 		ow: "Ongoing - Each Player",
 		args: [
@@ -26,7 +26,7 @@ export const CONSTANTS: Record<string, { ow: string, type: string }> = {
 	},
 };
 
-export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: string }[] }> = {
+export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: string }[], ret?: string } | undefined> = {
 	"disableGameModeHUD": {
 		ow: "Disable Game Mode HUD",
 		args: [

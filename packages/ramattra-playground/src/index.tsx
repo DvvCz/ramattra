@@ -141,4 +141,4 @@ const App = () => {
 	</>;
 };
 
-render(<App/>, document.body);
+render(<App />, document.body);

@@ -18,13 +18,13 @@ Event = "event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block
 }
 
 Block "block" =
-	"{" _ @Stmt|.., _ ";"? _| ";"? _ "}"
+	"{" _ stmts:Stmt|.., _ ";"? _| ";"? _ "}" { return ["block", stmts] }
 
 Stmt =
 	"if" _ cond:Expr _ block:Block { return ["if", cond, block] }
-	/ "for" _ marker:ident _ "in" _ start:Expr ".." end:Expr _ block:Block { return ["for", marker, start, end] }
+	/ "for" _ marker:ident _ "in" _ start:Expr ".." end:Expr _ block:Block { return ["for", marker, start, end, block] }
 	/ "while" _ cond:Expr _ block:Block { return ["while", cond, block] }
-	/ "let" _ name:ident _ "=" _ value:Expr { return ["let", name, value] }
+	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return ["let", name, type, value] }
 	/ name:ident _ "=" _ value:Expr { return ["assign", name, value] }
 	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["methodcall", obj, mname, args] }
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", name, args] }
@@ -36,11 +36,11 @@ BaseExpr =
 	/ '"' inner:[^"]+ '"' { return ["string", inner.join("")] }
 	/ ( "true" / "false" ) { return ["boolean", text() == "true"] }
 	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return ["array", type, items] }
-	/ [0-9]+ "." [0-9]+ { return ["float", parseFloat(text())] }
-	/ "0b" [0-1]+ { return ["int", parseInt(text().substring(2), 2)] }
-	/ "0o" [0-1]+ { return ["int", parseInt(text().substring(2), 8)] }
-	/ "0x" [0-1]+ { return ["int", parseInt(text().substring(2), 16)] }
-	/ [0-9]+ { return ["int", parseInt(text())] }
+	/ [0-9]+ "." [0-9]+ { return ["number", parseFloat(text())] }
+	/ "0b" [0-1]+ { return ["number", parseInt(text().substring(2), 2)] }
+	/ "0o" [0-1]+ { return ["number", parseInt(text().substring(2), 8)] }
+	/ "0x" [0-1]+ { return ["number", parseInt(text().substring(2), 16)] }
+	/ [0-9]+ { return ["number", parseInt(text())] }
 	/ ident:ident { return ["ident", ident] }
 
 Expr =
@@ -74,24 +74,50 @@ _ =
 	(ws / comment)*
 `;
 
-export type Block = Statement[];
-
-export type Statement =
-	["if", Expr, Block];
+export type Stmt =
+	["block", Stmt[]]
+	| ["if", Expr, Stmt]
+	| ["for", string, Expr, Expr, Stmt]
+	| ["while", Expr, Stmt]
+	| ["let", string, string, Expr | null]
+	| ["assign", string, Expr]
+	| ["methodcall", Expr, string, Expr[]]
+	| ["call", string, Expr[]];
 
 export type Expr =
-	["not", Expr]
-	| ["typeof", Expr]
-	| ["methodcall", string, string, Expr[]]
-	| ["call", string, Expr[]]
-	| ["string", string]
-	| ["boolean", boolean]
-	| ["array", string|null, Expr[]]
-	| ["int", number]
-	| ["float", number];
+	["add", Expr, Expr] |
+	["sub", Expr, Expr] |
+	["mul", Expr, Expr] |
+	["div", Expr, Expr] |
 
-export type Function = ["function", string, string[], Block];
-export type Event = ["event", string, string[], Block];
+	["eq", Expr, Expr] |
+	["neq", Expr, Expr] |
+	["gte", Expr, Expr] |
+	["gt", Expr, Expr] |
+	["lt", Expr, Expr] |
+	["lte", Expr, Expr] |
+
+	["or", Expr, Expr] |
+	["and", Expr, Expr] |
+
+	["index", Expr, Expr] |
+	["methodcall", Expr, string, Expr[]] |
+	["call", string, Expr[]] |
+
+	["not", Expr] |
+	["typeof", Expr] |
+
+	["ident", string] |
+	["string", string] |
+	["boolean", boolean] |
+	["array", string | null, Expr[]] |
+	["number", number]
+
+export type Function
+	= ["function", string, string[], Stmt];
+
+export type Event
+	= ["event", string, string[], Stmt];
 
 export default function parse(src: string): (Function | Event)[] {
 	try {

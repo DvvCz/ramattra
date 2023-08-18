@@ -3,6 +3,7 @@
 	"author": "David Cruz",
 	"description": "CLI to access ramattra with lua from the command line",
 	"version": "0.1.0",
+	"type": "module",
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
