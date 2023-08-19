@@ -61,7 +61,7 @@ export default function assemble(src: string): string {
 		} else if (kind == "boolean") {
 			return expr.data[1].toString();
 		} else if (kind == "array") {
-			return `Array(${expr.data[2].join(", ")})`;
+			return `Array(${expr.data[2].map(expression).join(", ")})`;
 		} else if (kind == "number") {
 			return expr.data[1].toString();
 		}
