@@ -6,6 +6,10 @@
 		"outDir": "lib"
 	},
 
+	"exclude": [
+		"lib"
+	],
+
 	"references": [
 		{
 			"path": "../ramattra-core"

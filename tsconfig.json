@@ -3,6 +3,7 @@
 		"module": "ESNext",
 		"moduleResolution": "Node",
 		"target": "ESNext",
+		"composite": true,
 		"strict": true,
 		"declaration": true,
 		"sourceMap": true

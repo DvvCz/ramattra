@@ -4,15 +4,16 @@
 	"description": "The main repository containing the parser and assembler for Ramattra",
 	"version": "0.1.0",
 	"type": "module",
+
 	"main": "lib/index.js",
 	"types": "lib/index.d.ts",
+
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"build": "tsc",
 		"watch": "tsc --watch"
 	},
 	"dependencies": {
-		"peggy": "^3.0.2",
-		"peggy-tag": "github:peggyjs/peggy-tag"
+		"peggy": "^3.0.2"
 	}
 }

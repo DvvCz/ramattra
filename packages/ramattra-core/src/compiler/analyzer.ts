@@ -104,8 +104,7 @@ export default function analyze(src: string): IREvent[] {
 
 			return { type: array.type.slice(6, -1), data: [kind, array, index] };
 		} else if (kind == "methodcall") {
-			const [obj, method_name, args] = [analyzeExpr(expr[1]), expr[2], expr[3].map(analyzeExpr)];
-			throw `Unimplemented: Methodcall`;
+			return analyzeExpr(["call", expr[2], [expr[1], ...expr[3]]]);
 		} else if (kind == "call") {
 			const [name, args] = [expr[1], expr[2].map(analyzeExpr)];
 
