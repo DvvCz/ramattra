@@ -1,6 +1,6 @@
 export function dedent(template: TemplateStringsArray, ...subs: any[]): string {
-	const middle = String.raw(template, ...subs).trim();
-	const lines = middle.split("\n");
+	const middle = String.raw(template, ...subs).trimEnd();
+	const lines = middle.split("\n").slice(1);
 
 	let min = null;
 	for (const line of lines) {

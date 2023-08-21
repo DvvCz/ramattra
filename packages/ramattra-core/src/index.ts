@@ -1,3 +1,3 @@
-import assemble from "./compiler/assembler";
+import assemble from "./compiler/assembler.js";
 
 export { assemble };

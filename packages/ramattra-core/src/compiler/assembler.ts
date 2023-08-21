@@ -1,5 +1,5 @@
-import { dedent } from "../util";
-import analyze, { IRExpr, IRStmt } from "./analyzer";
+import { dedent } from "../util.js";
+import analyze, { IRExpr, IRStmt } from "./analyzer.js";
 
 export default function assemble(src: string): string {
 	const ast = analyze(src);
@@ -7,59 +7,47 @@ export default function assemble(src: string): string {
 
 	const expression = (expr: IRExpr): string => {
 		const kind = expr.data[0];
-		if (kind == "add") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		if (kind == "+") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			if (expr.type == "string") {
 				return `Custom String("{0}{1}", ${lhs} ${rhs})`;
 			} else {
 				return `Add(${lhs}, ${rhs})`;
 			}
-		} else if (kind == "sub") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		} else if (kind == "-") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			return `Subtract(${lhs}, ${rhs})`;
-		} else if (kind == "mul") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		} else if (kind == "*") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			return `Multiply(${lhs}, ${rhs})`;
-		} else if (kind == "div") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		} else if (kind == "/") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			return `Divide(${lhs}, ${rhs})`;
-		} else if (kind == "eq") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, ==, ${rhs})`;
-		} else if (kind == "neq") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, ==, ${rhs})`;
-		} else if (kind == "gte") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, >=, ${rhs})`;
-		} else if (kind == "gt") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, >, ${rhs})`;
-		} else if (kind == "lt") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, <, ${rhs})`;
-		} else if (kind == "lte") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
-			return `Compare(${lhs}, <=, ${rhs})`;
-		} else if (kind == "or") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		} else if (kind == "==" || kind == "!=" || kind == ">=" || kind == ">" || kind == "<" || kind == "<=") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
+			return `Compare(${lhs}, ${kind}, ${rhs})`;
+		} else if (kind == "||") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			return `Or(${lhs}, ${rhs})`;
-		} else if (kind == "and") {
-			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])]
+		} else if (kind == "&&") {
+			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			return `And(${lhs}, ${rhs})`;
 		} else if (kind == "index") {
-			throw `Unimplemented: Index`;
+			const [obj, idx] = [expression(expr.data[1]), expression(expr.data[2])];
+			return `Value In Array(${obj}, ${idx})`;
 		} else if (kind == "call") {
-			const [name, args] = [expr.data[1], expr.data[2].map(expression)];
-			return `${name}(${args.join(", ")})`;
-		} else if (kind == "not") {
+			return `${expr.data[1]}(${expr.data[2].map(expression).join(", ")})`;
+		} else if (kind == "!") {
 			return `Not(${expression(expr.data[1])})`;
+		} else if (kind == "constant") {
+			return expr.data[1];
 		} else if (kind == "ident") {
-			throw `Unimplemented: Ident`;
+			const [, name, depth] = expr.data;
+			return `Value In Array(Global Variable(Vars), ${name}${depth})`;
 		} else if (kind == "string") {
-			return `"${expr.data[1]}"`;
+			return `Custom String("${expr.data[1]}")`;
 		} else if (kind == "boolean") {
-			return expr.data[1].toString();
+			return expr.data[1] ? "True" : "False";
 		} else if (kind == "array") {
 			return `Array(${expr.data[2].map(expression).join(", ")})`;
 		} else if (kind == "number") {
@@ -90,10 +78,10 @@ export default function assemble(src: string): string {
 				End;
 			`;
 		} else if (kind == "let") {
-			const [, name, type, value] = stmt;
+			const [, name, depth, type, value] = stmt;
 
 			return dedent`
-				Set Global Variable At Index(Vars, ${name}, ${expression(value)})
+				Set Global Variable At Index(Vars, ${name}${depth}, ${expression(value)})
 			`;
 		} else if (kind == "assign") {
 			const [, name, expr] = stmt;

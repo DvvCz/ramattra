@@ -1,11 +1,18 @@
 {
 	"name": "@ramattra/ramattra-cli",
 	"author": "David Cruz",
-	"description": "CLI to access ramattra with lua from the command line",
+	"description": "CLI to access the Ramattra compiler from the command line",
 	"version": "0.1.0",
 	"type": "module",
+	"private": true,
+	"bin": {
+		"ramattra": "./dist/index.js"
+	},
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"build": "tsc -b"
+	},
+	"dependencies": {
+		"commander": "^11.0.0"
 	}
 }

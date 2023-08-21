@@ -4,7 +4,7 @@ A language written in lua that compiles to [Overwatch Workshop Scripts](https://
 
 ## Example
 
-```rs
+```ts
 function killThemAll() {
 	let players = TEAM_ALL.allPlayers()
 	players.setHealth(0)

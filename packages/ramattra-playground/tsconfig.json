@@ -1,12 +1,14 @@
 {
 	"extends": "../../tsconfig.json",
-
 	"compilerOptions": {
 		"noEmit": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "preact"
 	},
-
+	"include": [
+		"src",
+		"vite.config.ts"
+	],
 	"references": [
 		{
 			"path": "../ramattra-core"

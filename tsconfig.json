@@ -1,11 +1,23 @@
 {
 	"compilerOptions": {
 		"module": "ESNext",
-		"moduleResolution": "Node",
+		"moduleResolution": "NodeNext",
 		"target": "ESNext",
+		"esModuleInterop": false,
 		"composite": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"useDefineForClassFields": true,
+		"skipLibCheck": true,
+		"allowJs": false,
 		"strict": true,
 		"declaration": true,
+		"declarationMap": true,
 		"sourceMap": true
-	}
+	},
+	"exclude": [
+		"node_modules",
+		"dist",
+		"lib"
+	]
 }
