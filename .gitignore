@@ -3,5 +3,4 @@ node_modules
 lib
 *.ows
 *.tsbuildinfo
-package-lock.json
 coverage
