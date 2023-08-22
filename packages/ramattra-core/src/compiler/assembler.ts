@@ -1,4 +1,4 @@
-import { dedent } from "../util.js";
+import { dedent } from "@ramattra/ramattra-util";
 import analyze, { IRExpr, IRStmt } from "./analyzer.js";
 
 export function assemble(src: string): string {

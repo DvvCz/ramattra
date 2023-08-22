@@ -1,0 +1,12 @@
+{
+	"name": "@ramattra/ramattra-util",
+	"author": "David Cruz",
+	"description": "Utilities for Ramattra subprojects.",
+	"version": "0.1.0",
+	"private": true,
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"scripts": {
+		"test": "vitest"
+	}
+}

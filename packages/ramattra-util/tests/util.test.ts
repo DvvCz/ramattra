@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { dedent } from "../src/util.js";
+import { dedent } from "../src/index.js";
 
 it("should dedent simple string", () => {
 	const got = dedent`
