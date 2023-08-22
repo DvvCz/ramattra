@@ -287,8 +287,8 @@ export default function analyze(src: string): IREvent[] {
 	const out: IREvent[] = [];
 	for (const obj of ast) {
 		if (obj[0] == "function") {
-			const [name, params, block] = [obj[1], obj[2], analyzeStmt(obj[3])];
-			// TODO: Functions
+			const [, name, params, block] = obj;
+			throw `TODO: Functions`;
 		} else {
 			const [, name, args, block] = obj;
 

@@ -1,8 +1,9 @@
 import { dedent } from "@ramattra/ramattra-util";
 import analyze, { IRExpr, IRStmt } from "./analyzer.js";
+import optimize from "./optimizer.js";
 
 export function assemble(src: string): string {
-	const ast = analyze(src);
+	const ast = optimize(analyze(src));
 	const buffer = [];
 
 	const expression = (expr: IRExpr): string => {
