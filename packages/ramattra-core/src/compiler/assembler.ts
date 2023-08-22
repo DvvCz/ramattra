@@ -66,10 +66,10 @@ export function assemble(src: string): string {
 			const [, condition, block] = stmt;
 
 			return dedent`
-				If (${condition});
-					${block}
+				If (${expression(condition)});
+					%S
 				End;
-			`;
+			`.replace("%S", statement(block));
 		} else if (kind == "while") {
 			const [, condition, block] = stmt;
 

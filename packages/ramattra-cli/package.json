@@ -1,7 +1,7 @@
 {
 	"name": "@ramattra/ramattra-cli",
 	"author": "David Cruz",
-	"description": "CLI to access the Ramattra compiler from the command line",
+	"description": "CLI to access the Ramattra compiler.",
 	"version": "0.1.0",
 	"private": true,
 	"bin": {

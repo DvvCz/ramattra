@@ -1,16 +1,11 @@
 # Ramattra
 
-A language written in lua that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
+A language that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
 
 ## Example
 
 ```ts
-function killThemAll() {
-	let players = TEAM_ALL.allPlayers()
-	players.setHealth(0)
-}
-
-event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variables from events
+event playerDied(victim, attacker, damage, crit, ability, dir) { // Explicit event variables.
 	let players = [victim, attacker]
 
 	players.setInvisible(INVISIBLE_TO_ALL) // Enums as constants
@@ -32,10 +27,8 @@ event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variab
 
 	let numbers = <number>[1, 2, 3, 4, 5] // Can annotate array type
 
-	for i in 0..5 { // For loop
+	for i in 0..5 {
 		let num = numbers[i]
 	}
-
-	killThemAll()
 }
 ```
