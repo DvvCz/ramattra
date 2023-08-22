@@ -1,0 +1,20 @@
+# Simple workflow for deploying static content to GitHub Pages
+name: Run Vitest
+
+on:
+  # Runs on pushes targeting the default branch
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  vitest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test
