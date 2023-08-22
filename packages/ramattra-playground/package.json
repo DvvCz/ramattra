@@ -3,7 +3,6 @@
 	"author": "David Cruz",
 	"description": "Playground to use Ramattra on the web",
 	"version": "0.1.0",
-	"type": "module",
 	"private": true,
 	"scripts": {
 		"dev": "vite",

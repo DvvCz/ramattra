@@ -1,3 +1,5 @@
+import { Expr } from "./parser";
+
 export const EVENTS: Record<string, { ow: string, args: { type: string, ow: string }[] }> = {
 	"client": {
 		ow: "Ongoing - Each Player",
@@ -138,28 +140,99 @@ export const CONSTANTS: Record<string, { ow: string, type: string }> = {
 	"HERO_KIRIKO": { ow: "Kiriko", type: "hero" },
 	"HERO_ANA": { ow: "Ana", type: "hero" },
 	"HERO_PHARAH": { ow: "Pharah", type: "hero" },
-	"HERO_ILLARI": { ow: "Illari", type: "hero" }
+	"HERO_ILLARI": { ow: "Illari", type: "hero" },
+
+	"ROUND_NEAREST": { ow: "To Nearest", type: "rounding" },
+	"ROUND_UP": { ow: "Up", type: "rounding" },
+	"ROUND_DOWN": { ow: "Down", type: "rounding" },
 };
 
-export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: string }[], ret?: string } | undefined> = {
-	"disableGameModeHUD": {
-		ow: "Disable Game Mode HUD",
+export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: Expr }[], ret?: string } | undefined> = {
+	"disableGameModeHUD": { ow: "Disable Game Mode HUD", args: [{ type: "player" }] },
+
+	"createHUDText": {
+		ow: "Create HUD Text",
 		args: [
-			{ type: "player" }
-		]
+			{ type: "array<player>|player" },
+			{ type: "string" },
+			{ type: "string", default: ["number", 0] },
+			{ type: "string", default: ["number", 0] },
+			{ type: "hudpos", default: ["ident", "HUD_LEFT"] },
+			{ type: "number", default: ["number", 0] },
+			{ type: "color", default: ["ident", "COLOR_WHITE"] },
+			{ type: "color", default: ["ident", "COLOR_WHITE"] },
+			{ type: "color", default: ["ident", "COLOR_WHITE"] },
+			{ type: "hudeval", default: ["ident", "HUDEVAL_NONE"] },
+			{ type: "visibility", default: ["ident", "SPECTATOR_VISIBLE_DEFAULT"] },
+		],
 	},
 
-	"allPlayers": {
-		ow: "All Players",
-		args: [
-			{ type: "team" }
-		]
+	"lastTextID": {
+		ow: "Last Text ID",
+		args: [],
+		ret: "textid",
 	},
 
-	"disableMessages": {
-		ow: "Disable Messages",
-		args: [
-			{ type: "player" }
-		]
-	}
+	"destroyHUDText": {
+		ow: "Destroy HUD Text",
+		args: [{ type: "textid" }],
+	},
+
+	"format": { ow: "Custom String", args: [{ type: "string" }, { type: "..." }], ret: "string" },
+
+	// "wait": { ow: "Wait", args: [ "number" } },
+	"disableMessages": { ow: "Disable Messages", args: [{ type: "player" }] },
+
+	"allPlayers": { ow: "All Players", args: [{ type: "team" }], ret: "array<player>" },
+
+	"setAbility1Enabled": { ow: "Set Ability 1 Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setAbility2Enabled": { ow: "Set Ability 2 Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setAbilityCharge": { ow: "Set Ability Charge", args: [{ type: "player" }, { type: "button" }, { type: "number" }] },
+	"setAbilityCooldown": { ow: "Set Ability Cooldown", args: [{ type: "player" }, { type: "button" }, { type: "number" }] },
+	"setAbilityResource": { ow: "Set Ability Resource", args: [{ type: "player|array<player>" }, { type: "button" }, { type: "number" }] },
+	"setAimSpeed": { ow: "Set Aim Speed", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setAmmo": { ow: "Set Ammo", args: [{ type: "player|array<player>" }, { type: "number" }, { type: "number" }] },
+	"setCrouchEnabled": { ow: "Set Crouch Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setDamageDealt": { ow: "Set Damage Dealt", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setDamageReceived": { ow: "Set Damage Received", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setDeathEnvironmentCredit": { ow: "Set Environment Credit Player", args: [{ type: "player|array<player>" }, { type: "player|array<player>" }] },
+	"setFacing": { ow: "Set Facing", args: [{ type: "player|array<player>" }, { type: "vector" }, { type: "relativity" }] },
+	"setHealingDealt": { ow: "Set Healing Dealt", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setHealingReceived": { ow: "Set Healing Received", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setInvisible": { ow: "Set Invisible", args: [{ type: "player|array<player>" }, { type: "invis", default: ["ident", "INVISIBLE_TO_ALL"] }] },
+	"setJumpEnabled": { ow: "Set Jump Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setJumpVerticalSpeed": { ow: "Set Jump Vertical Speed", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setKnockbackDealt": { ow: "Set Knockback Dealt", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setKnockbackReceived": { ow: "Set Knockback Received", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setMaxAmmo": { ow: "Set Max Ammo", args: [{ type: "player|array<player>" }, { type: "number" }, { type: "number" }] },
+	"setMaxHealth": { ow: "Set Max Health", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setMeleeEnabled": { ow: "Set Melee Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setMoveSpeed": { ow: "Set Melee Enabled", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setAllowedHeroes": { ow: "Set Player Allowed Heroes", args: [{ type: "player|array<player>" }, { type: "hero|array<hero>" }] },
+	"setHealth": { ow: "Set Player Health", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setScore": { ow: "Set Player Score", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setPrimaryFireEnabled": { ow: "Set Primary Fire Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setProjectileGravity": { ow: "Set Projectile Gravity", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setProjectileSpeed": { ow: "Set Projectile Speed", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setReloadEnabled": { ow: "Set Reload Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setRespawnMaxTime": { ow: "Set Respawn Max Time", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setSecondaryFireEnabled": { ow: "Set Secondary Fire Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setStatus": { ow: "Set Status", args: [{ type: "player|array<player>" }, { type: "player" }, { type: "status" }, { type: "number" }] },
+	"setUltimateEnabled": { ow: "Set Ultimate Ability Enabled", args: [{ type: "player|array<player>" }, { type: "boolean" }] },
+	"setUltimateCharge": { ow: "Set Ultimate Charge", args: [{ type: "player|array<player>" }, { type: "number" }] },
+	"setWeapon": { ow: "Set Weapon", args: [{ type: "player|array<player>" }, { type: "number" }] },
+
+	"getHero": { ow: "Hero Of", args: [{ type: "player" }], ret: "hero" },
+	"getHealth": { ow: "Health", args: [{ type: "player" }], ret: "number" },
+
+	"round": { ow: "Round To Integer", args: [{ type: "number" }, { type: "rounding", default: ["ident", "ROUND_NEAREST"] }], ret: "number" },
+	"ceil": { ow: "Round To Integer", args: [{ type: "number" }, { type: "rounding", default: ["ident", "ROUND_UP"] }], ret: "number" },
+	"floor": { ow: "Round To Integer", args: [{ type: "number" }, { type: "rounding", default: ["ident", "ROUND_DOWN"] }], ret: "number" },
+
+	"Vector": { ow: "Vector", args: [{ type: "number" }, { type: "number" }, { type: "number" }], ret: "vector" },
+	"cross": { ow: "Cross Product", args: [{ type: "vector" }, { type: "vector" }], ret: "vector" },
+	"dot": { ow: "Dot Product", args: [{ type: "vector" }, { type: "vector" }], ret: "number" },
+	"towards": { ow: "Vector Towards", args: [{ type: "vector" }, { type: "vector" }], ret: "vector" },
+
+	"pow": { ow: "Raise To Power", args: [{ type: "number" }, { type: "number" }], ret: "number" }
 };

@@ -3,7 +3,6 @@
 	"author": "David Cruz",
 	"description": "CLI to access the Ramattra compiler from the command line",
 	"version": "0.1.0",
-	"type": "module",
 	"private": true,
 	"bin": {
 		"ramattra": "./dist/index.js"

@@ -1,3 +1,2 @@
-import assemble from "./compiler/assembler.js";
-
-export { assemble };
+export { parse } from "./compiler/parser.js";
+export { assemble } from "./compiler/assembler.js";

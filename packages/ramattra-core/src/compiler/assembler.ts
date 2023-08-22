@@ -1,7 +1,7 @@
 import { dedent } from "../util.js";
 import analyze, { IRExpr, IRStmt } from "./analyzer.js";
 
-export default function assemble(src: string): string {
+export function assemble(src: string): string {
 	const ast = analyze(src);
 	const buffer = [];
 
@@ -10,7 +10,7 @@ export default function assemble(src: string): string {
 		if (kind == "+") {
 			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
 			if (expr.type == "string") {
-				return `Custom String("{0}{1}", ${lhs} ${rhs})`;
+				return `Custom String("{0}{1}", ${lhs}, ${rhs})`;
 			} else {
 				return `Add(${lhs}, ${rhs})`;
 			}
@@ -42,8 +42,8 @@ export default function assemble(src: string): string {
 		} else if (kind == "constant") {
 			return expr.data[1];
 		} else if (kind == "ident") {
-			const [, name, depth] = expr.data;
-			return `Value In Array(Global Variable(Vars), ${name}${depth})`;
+			const [, id] = expr.data;
+			return `Value In Array(Global Variable(Vars), ${id})`;
 		} else if (kind == "string") {
 			return `Custom String("${expr.data[1]}")`;
 		} else if (kind == "boolean") {
@@ -73,27 +73,26 @@ export default function assemble(src: string): string {
 			const [, condition, block] = stmt;
 
 			return dedent`
-				While(${condition});
-					${block};
+				While(${expression(condition)});
+					%S
 				End;
-			`;
+			`.replace("%S", statement(block));
 		} else if (kind == "let") {
-			const [, name, depth, type, value] = stmt;
+			const [, id, type, value] = stmt;
 
 			return dedent`
-				Set Global Variable At Index(Vars, ${name}${depth}, ${expression(value)})
+				Set Global Variable At Index(Vars, ${id}, ${expression(value)});
 			`;
 		} else if (kind == "assign") {
-			const [, name, expr] = stmt;
+			const [, id, expr] = stmt;
 
 			return dedent`
-				Set Global Variable At Index(Vars, ${name}, ${expr})
+				Set Global Variable At Index(Vars, ${id}, ${expression(expr)});
 			`;
 		} else if (kind == "call") {
 			const [, name, args] = stmt;
-
 			return dedent`
-				${name}(${args})
+				${name}(${args.map(expression).join(", ")});
 			`;
 		} else if (kind == "noop") {
 			return "";
@@ -105,6 +104,7 @@ export default function assemble(src: string): string {
 	for (const obj of ast) {
 		const [, name, ow, block] = obj;
 
+		// TODO: Probably want dedent to lazily evaluate template expressions or something as to not need this hack.
 		buffer.push(dedent`
 			rule("${name}") {
 				event {
@@ -113,11 +113,17 @@ export default function assemble(src: string): string {
 					All;
 				}
 				actions {
-					${statement(block)}
+					%S
 				}
 			}
-		`);
+		`.replace("%S", statement(block)));
 	}
 
-	return buffer.join("\n");
+	return dedent`
+		variables {
+			global:
+				0: Vars
+		}
+		%S
+	`.replace("%S", buffer.join("\n"));
 }

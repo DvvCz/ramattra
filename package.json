@@ -4,9 +4,9 @@
 	"description": "A language written that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).",
 	"version": "0.1.0",
 	"private": true,
-	"type": "module",
 	"scripts": {
 		"playground:dev": "npm run dev -w @ramattra/ramattra-playground",
+		"build": "tsc -b tsconfig.build.json",
 		"test": "vitest",
 		"coverage": "vitest run --coverage"
 	},

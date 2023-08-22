@@ -1,6 +1,7 @@
 import * as peggy from "peggy";
 
-const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(template), { allowedStartRules: process.env.NODE_ENV == "test" ? ["*"] : undefined });
+/* c8 ignore next 1: Testing variable check. */
+const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(template), process.env.NODE_ENV == "test" ? { allowedStartRules: ["*"] } : undefined);
 
 /**
  * Grammar for PeggyJS
@@ -47,7 +48,7 @@ BaseExpr =
 	/ [0-9]+ "." [0-9]+ { return ["number", parseFloat(text())] }
 	/ "0b" [0-1]+ { return ["number", parseInt(text().substring(2), 2)] }
 	/ "0x" [0-9a-fA-F]+ { return ["number", parseInt(text().substring(2), 16)] }
-	/ [0-9]+ !"." { return ["number", parseInt(text())] }
+	/ [0-9]+ { return ["number", parseInt(text())] }
 	/ args:ident|.., _ "," _| _ "=>" _ ret:Expr { return ["lambda", args, ret] }
 	/ ident:ident { return ["ident", ident] }
 

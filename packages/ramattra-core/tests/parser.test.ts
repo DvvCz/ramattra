@@ -53,10 +53,6 @@ it.skip("should parse unicode identifiers", () => {
 	expect(exp("Torbjörn")).toEqual(["ident", "Torbjörn"]);
 });
 
-it("should give appropriate number errors", () => {
-	expect(() => exp("0.")).toThrow(`Expected expression but "0" found.`);
-});
-
 it("should parse logical not", () => {
 	expect(exp("!5")).toEqual(["!", ["number", 5]]);
 	expect(exp("!!5")).toEqual(["!", ["!", ["number", 5]]]);
