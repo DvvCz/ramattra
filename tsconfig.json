@@ -12,7 +12,10 @@
 		"strict": true,
 		"declaration": true,
 		"declarationMap": true,
-		"sourceMap": true
+		"sourceMap": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	},
 	"exclude": [
 		"node_modules",

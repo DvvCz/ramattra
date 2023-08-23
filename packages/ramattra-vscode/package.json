@@ -1,0 +1,43 @@
+{
+	"name": "@ramattra/ramattra-vscode",
+	"displayName": "Ramattra",
+	"author": "David Cruz",
+	"publisher": "David Cruz",
+	"description": "Language server for ramattra",
+	"version": "0.1.0",
+	"private": true,
+	"main": "dist/extension.js",
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"contributes": {
+		"languages": [
+			{
+				"id": "ramattra",
+				"aliases": [
+					"Ramattra",
+					"ramattra"
+				],
+				"extensions": [
+					".ram",
+					".ramattra"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "ramattra",
+				"scopeName": "source.ram",
+				"path": "./syntaxes/ramattra.tmLanguage.json"
+			}
+		]
+	},
+	"scripts": {
+		"test": "vitest"
+	},
+	"dependencies": {
+		"vscode-languageserver": "^8.1.0",
+		"vscode-languageserver-textdocument": "^1.0.8"
+	}
+}

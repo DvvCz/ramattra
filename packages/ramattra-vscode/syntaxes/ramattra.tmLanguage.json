@@ -1,0 +1,147 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Ramattra",
+	"patterns": [
+		{
+			"include": "#core"
+		}
+	],
+	"repository": {
+		"core": {
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#statement"
+				},
+				{
+					"name": "invalid",
+					"begin": "(\\w+)(\\()",
+					"beginCaptures": {
+						"1": {
+							"name": "entity.name.function"
+						},
+						"2": {
+							"name": "keyword.operator"
+						}
+					},
+					"patterns": [
+						{
+							"include": "#expression"
+						},
+						{
+							"include": "#comment"
+						},
+						{
+							"name": "keyword.operator",
+							"match": ","
+						}
+					],
+					"end": "\\)"
+				},
+				{
+					"include": "#expression"
+				},
+				{
+					"name": "invalid",
+					"match": "."
+				}
+			]
+		},
+		"statement": {
+			"patterns": [
+				{
+					"begin": "(event|function)\\s+(\\w+)(\\()",
+					"patterns": [
+						{
+							"name": "variable.parameter",
+							"match": "\\w+"
+						},
+						{
+							"name": "keyword.operator",
+							"match": ","
+						},
+						{
+							"include": "#comment"
+						}
+					],
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.control"
+						},
+						"2": {
+							"name": "variable.name"
+						},
+						"3": {
+							"name": "keyword.operator"
+						}
+					},
+					"end": "\\)"
+				},
+				{
+					"include": "#keyword"
+				},
+				{
+					"include": "#operator"
+				}
+			]
+		},
+		"expression": {
+			"patterns": [
+				{
+					"name": "constant.numeric.hex",
+					"match": "\\b0[xX][0-9a-fA-F]+\\b"
+				},
+				{
+					"name": "constant.numeric.hex",
+					"match": "\\b0b[01]+\\b"
+				},
+				{
+					"name": "constant.numeric.normal",
+					"match": "\\b\\d+(?:\\.\\d+)?\\b"
+				},
+				{
+					"name": "string.quoted.double",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{
+							"name": "constant.character.escape",
+							"match": "\\\\(a|b|f|n|r|t|v|\\\\|\")"
+						}
+					]
+				},
+				{
+					"name": "variable.name",
+					"match": "\\w+"
+				}
+			]
+		},
+		"comment": {
+			"patterns": [
+				{
+					"name": "comment.line",
+					"match": "//.*$"
+				}
+			]
+		},
+		"keyword": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "\\b(event|function|if|else|let|while|for|in)\\b"
+				}
+			]
+		},
+		"operator": {
+			"patterns": [
+				{
+					"name": "keyword.operator",
+					"match": "(==|!=|>=|<=|<|>|=|!|&&|\\|\\||\\+|\\-|\\*|/|;|,)"
+				}
+			]
+		}
+	},
+	"scopeName": "source.ram"
+}
