@@ -13,5 +13,11 @@
 		{
 			"path": "packages/ramattra-playground"
 		},
+		{
+			"path": "packages/ramattra-language-server"
+		},
+		{
+			"path": "packages/ramattra-vscode"
+		},
 	]
 }

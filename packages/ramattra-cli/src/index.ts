@@ -10,7 +10,7 @@ program
 	.description("Parses a given source file into an AST")
 	.argument("<input-file>")
 	.argument("[output-file]")
-	.action(async (input, output, opts) => {
+	.action(async (input, output, _opts) => {
 		try {
 			const src = await fs.readFile(input);
 			try {
@@ -33,7 +33,7 @@ program
 	.description("Compiles a Ramattra script to a workshop script.")
 	.argument("<input-file>")
 	.argument("[output-file]")
-	.action(async (input, output, opts) => {
+	.action(async (input, output, _opts) => {
 		try {
 			const src = await fs.readFile(input);
 			try {
