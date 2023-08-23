@@ -4,12 +4,12 @@
 	"description": "Language server for ramattra",
 	"version": "0.1.0",
 	"private": true,
-	"main": "dist/server.js",
+	"main": "dist/node.js",
 	"scripts": {
 		"test": "vitest",
 		"watch": "tsc --watch"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"vscode-languageserver": "^8.1.0",
 		"vscode-languageserver-textdocument": "^1.0.8"
 	}

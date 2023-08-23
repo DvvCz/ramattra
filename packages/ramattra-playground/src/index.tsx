@@ -8,6 +8,22 @@ import { EditorView } from "@codemirror/view";
 import { javascript } from "@codemirror/lang-javascript";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 
+import { languageServerWithTransport } from "codemirror-languageserver";
+import { PostMessageWorkerTransport } from "./transport";
+
+/** @ts-ignore */
+import RamattraWorker from "@ramattra/ramattra-language-server/src/browser?worker";
+
+const worker = new RamattraWorker();
+
+const ls = languageServerWithTransport({
+	transport: new PostMessageWorkerTransport(worker),
+	rootUri: "file:///",
+	workspaceFolders: null,
+	documentUri: "file:///tsconfig.json",
+	languageId: "json"
+});
+
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
 const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
@@ -101,7 +117,7 @@ const App = () => {
 					indent
 					theme={vscodeDark}
 					onChange={setInCode}
-					extensions={[styling, javascript({ jsx: true })]}
+					extensions={[...ls, styling, javascript({ jsx: true })]}
 				/>
 			</div>
 

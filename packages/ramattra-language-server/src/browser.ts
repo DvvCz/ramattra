@@ -1,6 +1,6 @@
 import {
-	createConnection, TextDocuments, TextDocumentSyncKind, Diagnostic, DiagnosticSeverity, CompletionItem, CompletionItemKind
-} from "vscode-languageserver/node";
+	createConnection, TextDocuments, TextDocumentSyncKind, Diagnostic, DiagnosticSeverity, CompletionItem, CompletionItemKind, BrowserMessageWriter, BrowserMessageReader
+} from "vscode-languageserver/browser";
 
 import {
 	TextDocument
@@ -9,11 +9,11 @@ import {
 import { analyze } from "@ramattra/ramattra-core";
 
 // Creates the LSP connection
-const connection = createConnection();
+const connection = createConnection(new BrowserMessageReader(self), new BrowserMessageWriter(self));
 const documents = new TextDocuments(TextDocument);
 
 documents.onDidOpen((event) => {
-	connection.console.log(`[Server(${process.pid})] Document opened: ${event.document.uri}`);
+	connection.console.log(`[Server] Document opened: ${event.document.uri}`);
 });
 
 connection.onCompletion((_pos): CompletionItem[] => {
@@ -66,7 +66,7 @@ documents.onDidChangeContent(async e => {
 documents.listen(connection);
 
 connection.onInitialize((_params) => {
-	connection.console.log(`[Server(${process.pid})] Started and initialize received`);
+	connection.console.log(`[Server] Started and initialize received`);
 
 	return {
 		capabilities: {

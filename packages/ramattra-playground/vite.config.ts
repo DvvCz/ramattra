@@ -5,6 +5,9 @@ export default defineConfig({
 	plugins: [preact()],
 	base: "/Ramattra/",
 	resolve: {
-		preserveSymlinks: true
+		preserveSymlinks: true,
+		alias: {
+			events: "events"
+		}
 	}
 });

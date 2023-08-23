@@ -2,6 +2,11 @@
 
 A language similar to Typescript that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
 
+## Features
+- [x] Language Server
+- [x] [Online Playground](https://dvvcz.github.io/Ramattra)
+- [x] CLI
+
 ## Example
 
 ```ts
