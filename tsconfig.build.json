@@ -1,0 +1,17 @@
+{
+	"files": [],
+	"references": [
+		{
+			"path": "packages/ramattra-util"
+		},
+		{
+			"path": "packages/ramattra-core"
+		},
+		{
+			"path": "packages/ramattra-cli"
+		},
+		{
+			"path": "packages/ramattra-playground"
+		},
+	]
+}

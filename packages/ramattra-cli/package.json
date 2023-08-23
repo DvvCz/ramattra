@@ -1,0 +1,17 @@
+{
+	"name": "@ramattra/ramattra-cli",
+	"author": "David Cruz",
+	"description": "CLI to access the Ramattra compiler.",
+	"version": "0.1.0",
+	"private": true,
+	"bin": {
+		"ramattra": "./dist/index.js"
+	},
+	"main": "index.js",
+	"scripts": {
+		"build": "tsc -b"
+	},
+	"dependencies": {
+		"commander": "^11.0.0"
+	}
+}

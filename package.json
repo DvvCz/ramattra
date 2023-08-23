@@ -1,0 +1,22 @@
+{
+	"name": "ramattra",
+	"author": "David Cruz",
+	"description": "A language written that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"playground:dev": "npm run dev -w @ramattra/ramattra-playground",
+		"build": "tsc -b tsconfig.build.json",
+		"test": "vitest",
+		"coverage": "vitest run --coverage"
+	},
+	"workspaces": [
+		"packages/*"
+	],
+	"devDependencies": {
+		"@vitest/coverage-v8": "^0.34.2",
+		"ts-node": "^10.9.1",
+		"typescript": "^5.1.6",
+		"vitest": "^0.34.2"
+	}
+}
