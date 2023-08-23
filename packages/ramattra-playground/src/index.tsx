@@ -3,41 +3,31 @@ import { useState } from "preact/hooks";
 
 import { assemble } from "@ramattra/ramattra-core";
 
+import CodeMirror from "@uiw/react-codemirror";
+import { EditorView } from "@codemirror/view";
+import { javascript } from "@codemirror/lang-javascript";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
-const defaultCode = codeParam ? decodeURIComponent(codeParam) : `function killThemAll() {
-	let players = TEAM_ALL.allPlayers()
-	players.setHealth(0)
-}
-
-event playerDied(victim, attacker, damage, crit, ability, dir) { // Input variables from events
+const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
 	let players = [victim, attacker]
 
-	players.setInvisible(INVISIBLE_TO_ALL) // Enums as constants
-	players.createHUDText(
-		"Header",
-		"Subheader",
-		"Text",
+	players.setInvisible()
+	players.createHUDText("Header")
 
-		HUD_LEFT,
-		2,
+	let numbers = [1, 2, 3, 4, 5]
 
-		COLOR_RED,
-		COLOR_WHITE,
-		COLOR_BLUE,
-
-		HUDEVAL_NONE,
-		SPECTATOR_VISIBLE_DEFAULT
-	)
-
-	let numbers = <number>[1, 2, 3, 4, 5] // Can annotate array type
-
-	for i in 0..5 { // For loop
+	for i in 0..5 {
 		let num = numbers[i]
 	}
-
-	killThemAll()
 }`;
+
+const styling = EditorView.baseTheme({
+	"&": {
+		fontSize: "19px",
+	}
+});
 
 const App = () => {
 	const [inCode, setInCode] = useState(defaultCode);
@@ -60,16 +50,6 @@ const App = () => {
 		setTimeout(() => {
 			setPopupVisible("hidden");
 		}, 900);
-	}
-
-	function overrideTab(e: any) {
-		if (e.key == "Tab") {
-			e.preventDefault();
-			const start = e.target.selectionStart;
-			const end = e.target.selectionEnd;
-			e.target.value = e.target.value.substring(0, start) + "\t" + e.target.value.substring(end);
-			e.target.selectionStart = e.target.selectionEnd = start + 1;
-		}
 	}
 
 	function share() {
@@ -115,9 +95,14 @@ const App = () => {
 					<button onClick={share}>Share</button>
 				</div>
 
-				<textarea onKeyDown={overrideTab} onChange={e => setInCode((e as any).target.value)} spellcheck={false} class="input">
-					{inCode}
-				</textarea>
+				<CodeMirror
+					value={inCode}
+					height="85.7dvh"
+					indent
+					theme={vscodeDark}
+					onChange={setInCode}
+					extensions={[styling, javascript({ jsx: true })]}
+				/>
 			</div>
 
 			<div class="panel">
