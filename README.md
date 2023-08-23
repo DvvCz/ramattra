@@ -1,6 +1,6 @@
-# Ramattra
+# Ramattra [![Vitest](https://github.com/DvvCz/Ramattra/actions/workflows/vitest.yml/badge.svg)](https://github.com/DvvCz/Ramattra/actions)
 
-A language that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
+A language similar to Typescript that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
 
 ## Example
 
@@ -32,3 +32,7 @@ event playerDied(victim, attacker, damage, crit, ability, dir) { // Explicit eve
 	}
 }
 ```
+
+## Wiki
+
+You can find information about the language [on the wiki](https://github.com/DvvCz/Ramattra/wiki).

@@ -1,3 +1,3 @@
-# ramattra
+# ramattra-core
 
-The main repository containing the parser and assembler for Ramattra
+The main repository containing the compiler for Ramattra
