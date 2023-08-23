@@ -1,4 +1,4 @@
-# Ramattra [![Vitest](https://github.com/DvvCz/Ramattra/actions/workflows/vitest.yml/badge.svg)](https://github.com/DvvCz/Ramattra/actions) [![Playground](https://github.com/DvvCz/Ramattra/actions/workflows/static.yml/badge.svg)](https://dvvcz.github.io/Ramattra)
+# Ramattra [![Vitest](https://github.com/DvvCz/Ramattra/actions/workflows/vitest.yml/badge.svg)](https://github.com/DvvCz/Ramattra/actions) [![Playground](https://github.com/DvvCz/Ramattra/actions/workflows/playground.yml/badge.svg)](https://dvvcz.github.io/Ramattra)
 
 A language similar to Typescript that compiles to [Overwatch Workshop Scripts](https://workshop.codes/wiki).
 
