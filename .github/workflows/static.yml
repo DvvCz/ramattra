@@ -39,6 +39,7 @@ jobs:
       - name: Setup Project
         run: |
           npm ci
+          npm run build
           npm run build -w @ramattra/ramattra-playground
 
 
