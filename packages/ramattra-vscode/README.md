@@ -5,4 +5,6 @@ VSCode client for writing Ramattra code.
 ## Features
 
 - [x] Syntax highlighting
-- [ ] LSP Client
+- [x] LSP Client
+
+![Showcase](assets/showcase.png)

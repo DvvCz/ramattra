@@ -49,7 +49,7 @@ export type IRFunction =
 
 type Scope = Map<string, IRExpr>;
 
-export default function analyze(src: string): IREvent[] {
+export function analyze(src: string): IREvent[] {
 	const ast = parse(src);
 
 	let scope: Scope = new Map();
@@ -77,13 +77,11 @@ export default function analyze(src: string): IREvent[] {
 		if (kind == "+") {
 			const [lhs, rhs] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])];
 
-			if (lhs.type == "number" && rhs.type != "number")
-				throw `Cannot add a ${rhs.type} to a number`;
+			if (lhs.type != rhs.type)
+				throw `Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`;
 
-			// Can append anything to a string.
-
-			if (lhs.type != "string")
-				throw `Can only add strings`;
+			if (lhs.type != "string" && lhs.type != "number")
+				throw `Can only add numbers and strings`;
 
 			return { type: lhs.type, data: [kind, lhs, rhs] };
 		} else if (kind == "-" || kind == "*" || kind == "/") {

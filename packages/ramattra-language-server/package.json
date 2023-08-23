@@ -6,7 +6,8 @@
 	"private": true,
 	"main": "dist/server.js",
 	"scripts": {
-		"test": "vitest"
+		"test": "vitest",
+		"watch": "tsc --watch"
 	},
 	"dependencies": {
 		"vscode-languageserver": "^8.1.0",
