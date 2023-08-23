@@ -79,7 +79,7 @@ export function assemble(src: string): string {
 				End;
 			`.replace("%S", statement(block));
 		} else if (kind == "let") {
-			const [, id, type, value] = stmt;
+			const [, id, _type, value] = stmt;
 
 			return dedent`
 				Set Global Variable At Index(Vars, ${id}, ${expression(value)});
