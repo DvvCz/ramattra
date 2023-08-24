@@ -52,6 +52,7 @@ Stmt =
 	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return new Node(location(), ["let", name, type, value]) }
 	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return new Node(location(), ["assign", name, new Node(location(), [op, new Node(location(), ["ident", name]), value])]) }
 	/ name:ident _ "=" _ value:Expr { return new Node(location(), ["assign", name, value]) }
+	/ obj:Expr "." index:ident _ "=" _ value:Expr { return new Node(location(), ["iassign", obj, index]) }
 	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 
@@ -71,6 +72,7 @@ BaseExpr =
 Expr "expression" =
 	lhs:BaseExpr _ op:("+" / "-" / "*" / "/" / "==" / "!=" / ">=" / ">" / "<" / "<=" / "||" / "&&") _ rhs:Expr { return new Node(location(), [op, lhs, rhs]) }
 	/ obj:BaseExpr "[" _ index:Expr _ "]" { return new Node(location(), ["index", obj, index]) }
+	/ obj:BaseExpr "." index:ident !(_ "=" / "(") { return new Node(location(), ["index", obj, new Node(location(), ["string", index]) ]) }
 	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 	/ BaseExpr

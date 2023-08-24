@@ -1,17 +1,18 @@
 import { EVENTS, CONSTANTS, FUNCTIONS } from "./std.js";
 import { parse, Stmt, Expr } from "./parser.js";
+import { Type, TypeSolver, any, array, boolean, native, nothing, number, reprType, string } from "./typing.js";
 
 export type IRStmt =
 	["block", IRStmt[]]
 	| ["if", IRExpr, IRStmt]
 	| ["while", IRExpr, IRStmt]
-	| ["let", number, string, IRExpr]
+	| ["let", number, Type, IRExpr]
 	| ["assign", number, IRExpr]
 	| ["call", string, IRExpr[]]
 	| ["noop"]
 
 export type IRExpr =
-	{ type: string, data: IRExprData }
+	{ type: Type, data: IRExprData }
 
 type IRExprData =
 	["+", IRExpr, IRExpr] |
@@ -74,113 +75,107 @@ export function analyze(src: string): IREvent[] {
 	const analyzeExpr = (expr: Expr): IRExpr => {
 		const kind = expr.data[0];
 
+		const solver = new TypeSolver();
+
 		if (kind == "+") {
 			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
-			if (lhs.type != rhs.type)
-				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
+			if (!solver.satisfies(lhs.type, rhs.type))
+				expr.throw(`Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
 
-			if (lhs.type != "string" && lhs.type != "number")
+			if (lhs.type.kind != "native" || (lhs.type.name != "number" && lhs.type.name != "string"))
 				expr.throw(`Can only add numbers and strings`);
 
 			return { type: lhs.type, data: [kind, lhs, rhs] };
 		} else if (kind == "-" || kind == "*" || kind == "/") {
 			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
-			if (lhs.type != rhs.type)
-				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
+			if (!solver.satisfies(lhs.type, rhs.type))
+				expr.throw(`Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
 
-			if (lhs.type != "number")
+			if (!solver.satisfies(lhs.type, number))
 				expr.throw(`Cannot perform ${kind} operation on non-numeric expressions`);
 
-			return { type: "number", data: [kind as any, lhs, rhs] };
+			return { type: number, data: [kind as any, lhs, rhs] };
 		} else if (kind == "==" || kind == "!=" || kind == ">=" || kind == ">" || kind == "<" || kind == "<=") {
 			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])]
 
-			if (lhs.type != rhs.type)
-				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
+			if (!solver.satisfies(lhs.type, rhs.type))
+				expr.throw(`Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
 
-			return { type: "boolean", data: [kind as any, lhs, rhs] };
+			return { type: boolean, data: [kind as any, lhs, rhs] };
 		} else if (kind == "||" || kind == "&&") {
 			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])]
 
-			if (lhs.type != rhs.type)
-				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
+			if (!solver.satisfies(lhs.type, rhs.type))
+				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
 
-			if (lhs.type != "boolean")
+			if (!solver.satisfies(lhs.type, boolean))
 				expr.throw(`Cannot perform ${kind} operation on non-boolean expressions`);
 
-			return { type: "boolean", data: [kind as any, lhs, rhs] };
+			return { type: boolean, data: [kind as any, lhs, rhs] };
 		} else if (kind == "index") {
-			const [array, index] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
+			const [obj, index] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
-			if (!array.type.startsWith("array"))
+			if (!solver.satisfies(obj.type, array(any)))
 				expr.throw(`Cannot index non array type`);
 
-			if (index.type != "number")
+			if (!solver.satisfies(index.type, number))
 				expr.throw(`Can only index an array with a number`);
 
-			return { type: array.type.slice(6, -1), data: [kind, array, index] };
+			// TODO: Make satisfies signature deduce type as array, if possible
+			return { type: (obj.type as any).item, data: [kind, obj, index] };
 		} else if (kind == "call") {
 			const [name, args] = [expr.data[1], expr.data[2].map(analyzeExpr)];
 
-			const fn = FUNCTIONS[name];
 			const types = args.map(a => a.type);
+			const solver = new TypeSolver();
 
+			const fn = FUNCTIONS[name];
 			if (!fn)
-				expr.throw(`No such function ${name}(${types.join(", ")})`);
+				expr.throw(`No such function ${name}(${types.map(reprType).join(", ")})`);
 
-			outer: for (const expected of fn.args) {
+			for (const expected of fn.args) {
 				if (types.length == 0) {
 					if (expected.default) {
-						args.push(analyzeExpr({ location: expr.location, data: expected.default, throw: 0 as any }));
+						args.push({ type: expected.type, data: ["constant", expected.default] });
 						continue;
-					} else if (expected.type == "...") {
+					} else if (expected.type.kind == "variadic") {
 						break;
 					} else {
 						expr.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
 					}
 				}
 
-				const given = types.shift();
-				if (expected.type.includes("|")) {
-					for (const ty of expected.type.split("|")) {
-						if (given == ty)
-							continue outer;
-					}
-				} else if (expected.type == "...") {
-					break;
-				} else if (given == expected.type) {
-					continue;
-				}
-
-				expr.throw(`Expected ${expected.type}, got ${given}`);
+				const given = types.shift()!;
+				if (!solver.satisfies(expected.type, given))
+					expr.throw(`Expected ${expected.type}, got ${given}`)
 			}
 
-			return { type: fn.ret ?? "!", data: ["call", fn.ow, args] };
+			return { type: fn.ret ?? nothing, data: ["call", fn.ow, args] };
 		} else if (kind == "!") {
-			return { type: "boolean", data: [kind, analyzeExpr(expr.data[1])] };
+			return { type: boolean, data: [kind, analyzeExpr(expr.data[1])] };
 		} else if (kind == "typeof") {
 			const value = analyzeExpr(expr.data[1]);
-			return { type: "string", data: ["string", value.type] };
+			return { type: string, data: ["string", reprType(value.type)] };
 		} else if (kind == "string" || kind == "boolean" || kind == "number") {
-			return { type: kind, data: [kind as any, expr.data[1]] };
+			return { type: native(kind), data: [kind as any, expr.data[1]] };
 		} else if (kind == "array") {
 			const [type, values] = [expr.data[1], expr.data[2].map(analyzeExpr)];
 
-			let ty = type;
+			let ty = type && <Type>native(type); // TODO: Parse type properly
 			for (const value of values) {
 				if (!ty) {
 					ty = value.type;
-				} else if (value.type != ty) {
-					expr.throw(`Array of type ${ty} cannot also hold a ${value.type} type.`);
+				} else if (!solver.satisfies(value.type, ty)) {
+					expr.throw(`Array of type ${reprType(ty)} cannot also hold a ${reprType(value.type)} type.`);
 				}
 			}
 
 			if (!ty)
 				expr.throw(`Empty array must be given a tagged type <T>`);
 
-			return { type: `array<${ty}>`, data: [kind, expr.data[1], expr.data[2].map(analyzeExpr)] };
+			return { type: array(ty), data: [kind, expr.data[1], expr.data[2].map(analyzeExpr)] };
 		} else if (kind == "ident") {
 			const v = lookupVariable(expr.data[1]);
 			if (!v)
@@ -207,7 +202,7 @@ export function analyze(src: string): IREvent[] {
 			return ["while", analyzeExpr(statement.data[1]), analyzeStmt(statement.data[2])];
 		} else if (kind == "let") {
 			const [name, expr] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3])];
-			const type = statement.data[2] ? statement.data[2] : expr?.type;
+			const type = statement.data[2] ? native(statement.data[2]) : expr?.type; // TODO: Parse type properly
 
 			if (!type)
 				statement.throw(`Cannot declare variable without an expression or type annotation`);
@@ -246,32 +241,26 @@ export function analyze(src: string): IREvent[] {
 		} else if (kind == "call") {
 			const [name, args] = [statement.data[1], statement.data[2].map(analyzeExpr)];
 
+			const types = args.map(a => a.type);
+			const solver = new TypeSolver();
+
 			const fn = FUNCTIONS[name];
 			if (!fn)
-				statement.throw(`No such function ${name}`);
+				statement.throw(`No such function ${name}(${types.map(reprType).join(", ")})`);
 
-			const types = args.map(x => x.type);
-			outer: for (const expected of fn.args) {
+			for (const expected of fn.args) {
 				if (types.length == 0) {
 					if (expected.default) {
-						args.push(analyzeExpr({ location: statement.location, data: expected.default, throw: 0 as any }));
+						args.push({ type: expected.type, data: ["constant", expected.default] });
 						continue;
 					} else {
 						statement.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
 					}
 				}
 
-				const given = types.shift();
-				if (expected.type.includes("|")) {
-					for (const ty of expected.type.split("|")) {
-						if (given == ty)
-							continue outer;
-					}
-				} else if (given == expected.type) {
-					continue;
-				}
-
-				statement.throw(`Expected ${expected.type}, got ${given}`);
+				const given = types.shift()!;
+				if (!solver.satisfies(expected.type, given))
+					statement.throw(`Expected ${expected.type}, got ${given}`)
 			}
 
 			return ["call", fn.ow, args];

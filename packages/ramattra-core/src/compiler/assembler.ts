@@ -10,7 +10,7 @@ export function assemble(src: string): string {
 		const kind = expr.data[0];
 		if (kind == "+") {
 			const [lhs, rhs] = [expression(expr.data[1]), expression(expr.data[2])];
-			if (expr.type == "string") {
+			if (expr.type.kind == "native" && expr.type.name == "string") {
 				return `Custom String("{0}{1}", ${lhs}, ${rhs})`;
 			} else {
 				return `Add(${lhs}, ${rhs})`;

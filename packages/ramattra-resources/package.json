@@ -1,0 +1,12 @@
+{
+	"name": "@ramattra/ramattra-resources",
+	"author": "David Cruz",
+	"description": "Resource provider for Ramattra.",
+	"version": "0.1.0",
+	"private": true,
+	"main": "lib/index.js",
+	"types": "lib/index.d.ts",
+	"scripts": {
+		"test": "vitest"
+	}
+}

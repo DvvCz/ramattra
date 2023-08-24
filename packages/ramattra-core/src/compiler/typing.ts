@@ -1,23 +1,40 @@
 export type Type =
-	{ kind: "any" }
-	| { kind: "never" }
-	| { kind: "number" }
-	| { kind: "string" }
-	| { kind: "boolean" }
+	| { kind: "native", name: string }
 	| { kind: "array", item: Type }
 	| { kind: "function", params: Type[], ret: Type }
 	| { kind: "variadic", type: Type }
-	| { kind: "generic", name: string, bound: Type }
+	| { kind: "generic", name: string, bound?: Type }
+	| { kind: "union", types: Type[] }
 
-export const any = <Type>{ kind: "any" };
-export const never = <Type>{ kind: "never" };
-export const number = <Type>{ kind: "number" };
-export const string = <Type>{ kind: "string" };
-export const boolean = <Type>{ kind: "boolean" };
-export const array = (item: Type) => <Type>{ kind: "array", item };
-export const fn = (params?: Type[], ret?: Type) => <Type>{ kind: "function", params, ret };
-export const variadic = (type?: Type) => <Type>{ kind: "variadic", type };
-export const generic = (name: string, bound?: Type) => <Type>{ kind: "generic", name, bound };
+export const reprType = (ty: Type): string => {
+	switch (ty.kind) {
+		case "native":
+			return ty.name;
+		case "array":
+			return `${reprType(ty.item)}[]`;
+		case "function":
+			return ty.ret ? `fn(${ty.params.map(reprType).join(", ")}): ${reprType(ty.ret)}` : `fn(${ty.params.map(reprType).join(", ")})`;
+		case "union":
+			return ty.types.map(reprType).join("|")
+		case "generic":
+			return ty.bound ? `<${ty.name}: ${reprType(ty.bound)}>` : `<${ty.name}>`
+		case "variadic":
+			return `...${reprType(ty.type)}`
+	}
+}
+
+export const native = (name: string) => { return { kind: "native", name } satisfies Type };
+export const nothing = native("void");
+export const any = native("any");
+export const never = native("never");
+export const number = native("number");
+export const string = native("string");
+export const boolean = native("boolean");
+export const array = (item: Type) => { return { kind: "array", item } satisfies Type };
+export const fn = (params?: Type[], ret?: Type) => { return { kind: "function", params: params ?? [], ret: ret ?? nothing } satisfies Type };
+export const variadic = (type: Type) => { return { kind: "variadic", type } satisfies Type };
+export const generic = (name: string, bound?: Type) => { return { kind: "generic", name, bound } satisfies Type };
+export const union = (...types: Type[]) => { return { kind: "union", types } satisfies Type }
 
 export class TypeSolver {
 	private generics = new Map<string, Type>();
@@ -36,7 +53,7 @@ export class TypeSolver {
 	 * Returns if right side satisfies type constraints of left side.
 	 */
 	satisfies(lhs: Type, rhs: Type): boolean {
-		if (lhs.kind == "any")
+		if (lhs.kind == "native" && lhs.name == "any")
 			return true;
 
 		if (lhs.kind == "function" && rhs.kind == "function") {
@@ -100,6 +117,8 @@ export class TypeSolver {
 					return true;
 				}
 			}
+		} else if (lhs.kind == "native" && rhs.kind == "native") {
+			return lhs.name == rhs.name;
 		}
 
 		return lhs.kind == rhs.kind;
