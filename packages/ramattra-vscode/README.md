@@ -6,5 +6,6 @@ VSCode client for writing Ramattra code.
 
 - [x] Syntax highlighting
 - [x] LSP Client
+  - [x] Autocomplete
 
 ![Showcase](assets/showcase.png)

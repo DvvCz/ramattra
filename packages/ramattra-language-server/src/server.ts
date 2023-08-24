@@ -1,4 +1,5 @@
 import { FUNCTIONS, analyze, type Error, CONSTANTS, EVENTS } from "@ramattra/ramattra-core";
+import { dedent } from "@ramattra/ramattra-util";
 import { CompletionItemKind, Connection, Diagnostic, DiagnosticSeverity, TextDocuments, TextDocumentSyncKind } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -81,10 +82,42 @@ export const onInit = (connection: Connection) => {
 		return [...funcs, ...constants, ...events];
 	});
 
+	const WORKSHOP_CODES_HREF = "https://workshop.codes/wiki/articles/";
+
 	connection.onCompletionResolve(item => {
-		if (item.data == 1) {
-			item.detail = "TypeScript details";
-			item.documentation = "TypeScript documentation";
+		const data = item.data as [CompletionItemKind, string];
+		if (data[0] == CompletionItemKind.Function) {
+			const fn = FUNCTIONS[data[1]]!;
+			item.detail = `${data[1]}(${fn?.args.map(x => x.default ? `${x.type} = ${x.default}` : x.type).join(", ")})`
+			item.documentation = {
+				kind: "markdown",
+				value: dedent`
+					**Overwatch Function**: \`${fn.ow}\`
+					[workshop.codes](${WORKSHOP_CODES_HREF}${fn.ow.replaceAll(" ", "+").toLowerCase()})
+				`
+			}
+		} else if (data[0] == CompletionItemKind.Constant) {
+			const constant = CONSTANTS[data[1]]!;
+			item.detail = `${data[1]}: ${constant.type}`;
+			item.documentation = {
+				kind: "markdown",
+				value: dedent`
+					**Overwatch Value**: \`${constant.ow}\`
+				`
+			}
+		} else if (data[0] == CompletionItemKind.Event) {
+			const event = EVENTS[data[1]]!;
+			item.detail = `event ${data[1]}(${event.args.map(a => a.type).join(", ")})`
+			item.documentation = {
+				kind: "markdown",
+				value: dedent`
+					**Overwatch Event**: \`${event.ow}\`
+					[workshop.codes](${WORKSHOP_CODES_HREF}${event.ow.replaceAll(" ", "+").toLowerCase()})
+
+					### Arguments
+					%S
+				`.replace("%S", event.args.map(a => `* **${a.ow}**: \`${a.type}\``).join("\n"))
+			}
 		}
 
 		return item;
