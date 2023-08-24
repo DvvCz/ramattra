@@ -72,73 +72,73 @@ export function analyze(src: string): IREvent[] {
 	}
 
 	const analyzeExpr = (expr: Expr): IRExpr => {
-		const kind = expr[0];
+		const kind = expr.data[0];
 
 		if (kind == "+") {
-			const [lhs, rhs] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])];
+			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
 			if (lhs.type != rhs.type)
-				throw `Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`;
+				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
 
 			if (lhs.type != "string" && lhs.type != "number")
-				throw `Can only add numbers and strings`;
+				expr.throw(`Can only add numbers and strings`);
 
 			return { type: lhs.type, data: [kind, lhs, rhs] };
 		} else if (kind == "-" || kind == "*" || kind == "/") {
-			const [lhs, rhs] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])];
+			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
 			if (lhs.type != rhs.type)
-				throw `Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`;
+				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
 
 			if (lhs.type != "number")
-				throw `Cannot perform ${kind} operation on non-numeric expressions`;
+				expr.throw(`Cannot perform ${kind} operation on non-numeric expressions`);
 
 			return { type: "number", data: [kind as any, lhs, rhs] };
 		} else if (kind == "==" || kind == "!=" || kind == ">=" || kind == ">" || kind == "<" || kind == "<=") {
-			const [lhs, rhs] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])]
+			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])]
 
 			if (lhs.type != rhs.type)
-				throw `Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`;
+				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
 
 			return { type: "boolean", data: [kind as any, lhs, rhs] };
 		} else if (kind == "||" || kind == "&&") {
-			const [lhs, rhs] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])]
+			const [lhs, rhs] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])]
 
 			if (lhs.type != rhs.type)
-				throw `Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`;
+				expr.throw(`Cannot perform ${kind} operation on expressions of differing types (${lhs.type} and ${rhs.type})`);
 
 			if (lhs.type != "boolean")
-				throw `Cannot perform ${kind} operation on non-boolean expressions`;
+				expr.throw(`Cannot perform ${kind} operation on non-boolean expressions`);
 
 			return { type: "boolean", data: [kind as any, lhs, rhs] };
 		} else if (kind == "index") {
-			const [array, index] = [analyzeExpr(expr[1]), analyzeExpr(expr[2])];
+			const [array, index] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
 			if (!array.type.startsWith("array"))
-				throw `Cannot index non array type`;
+				expr.throw(`Cannot index non array type`);
 
 			if (index.type != "number")
-				throw `Can only index an array with a number`;
+				expr.throw(`Can only index an array with a number`);
 
 			return { type: array.type.slice(6, -1), data: [kind, array, index] };
 		} else if (kind == "call") {
-			const [name, args] = [expr[1], expr[2].map(analyzeExpr)];
+			const [name, args] = [expr.data[1], expr.data[2].map(analyzeExpr)];
 
 			const fn = FUNCTIONS[name];
 			const types = args.map(a => a.type);
 
 			if (!fn)
-				throw `No such function ${name}(${types.join(", ")})`;
+				expr.throw(`No such function ${name}(${types.join(", ")})`);
 
 			outer: for (const expected of fn.args) {
 				if (types.length == 0) {
 					if (expected.default) {
-						args.push(analyzeExpr(expected.default));
+						args.push(analyzeExpr({ location: expr.location, data: expected.default, throw: 0 as any }));
 						continue;
 					} else if (expected.type == "...") {
 						break;
 					} else {
-						throw `Not enough arguments passed to ${name}, expected ${expected.type}`;
+						expr.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
 					}
 				}
 
@@ -154,7 +154,7 @@ export function analyze(src: string): IREvent[] {
 					continue;
 				}
 
-				throw `Expected ${expected.type}, got ${given}`;
+				expr.throw(`Expected ${expected.type}, got ${given}`);
 			}
 
 			return { type: fn.ret ?? "!", data: ["call", fn.ow, args] };
@@ -164,59 +164,59 @@ export function analyze(src: string): IREvent[] {
 			const value = analyzeExpr(expr);
 			return { type: "string", data: ["string", value.type] };
 		} else if (kind == "string" || kind == "boolean" || kind == "number") {
-			return { type: kind, data: [kind as any, expr[1]] };
+			return { type: kind, data: [kind as any, expr.data[1]] };
 		} else if (kind == "array") {
-			const [type, values] = [expr[1], expr[2].map(analyzeExpr)];
+			const [type, values] = [expr.data[1], expr.data[2].map(analyzeExpr)];
 
 			let ty = type;
 			for (const value of values) {
 				if (!ty) {
 					ty = value.type;
 				} else if (value.type != ty) {
-					throw `Array of type ${ty} cannot also hold a ${value.type} type.`;
+					expr.throw(`Array of type ${ty} cannot also hold a ${value.type} type.`);
 				}
 			}
 
 			if (!ty)
-				throw `Empty array must be given a tagged type <T>`;
+				expr.throw(`Empty array must be given a tagged type <T>`);
 
-			return { type: `array<${ty}>`, data: [kind, expr[1], expr[2].map(analyzeExpr)] };
+			return { type: `array<${ty}>`, data: [kind, expr.data[1], expr.data[2].map(analyzeExpr)] };
 		} else if (kind == "ident") {
-			const v = lookupVariable(expr[1]);
+			const v = lookupVariable(expr.data[1]);
 			if (!v)
-				throw `Variable ${expr[1]} is not defined.`;
+				expr.throw(`Variable ${expr.data[1]} is not defined.`);
 			return v;
 		}
 
-		throw `Unreachable`;
+		expr.throw(`Unreachable`);
 	};
 
 	const analyzeStmt = (statement: Stmt): IRStmt => {
-		const kind = statement[0];
+		const kind = statement.data[0];
 		if (kind == "block") {
 			scope = new Map();
 
 			scopes.push(scope);
-			const out = statement[1].map(analyzeStmt);
+			const out = statement.data[1].map(analyzeStmt);
 			scope = scopes.pop()!;
 
 			return ["block", out];
 		} else if (kind == "if") {
-			return ["if", analyzeExpr(statement[1]), analyzeStmt(statement[2])];
+			return ["if", analyzeExpr(statement.data[1]), analyzeStmt(statement.data[2])];
 		} else if (kind == "while") {
-			return ["while", analyzeExpr(statement[1]), analyzeStmt(statement[2])];
+			return ["while", analyzeExpr(statement.data[1]), analyzeStmt(statement.data[2])];
 		} else if (kind == "let") {
-			const [name, expr] = [statement[1], statement[3] && analyzeExpr(statement[3])];
-			const type = statement[2] ? statement[2] : expr?.type;
+			const [name, expr] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3])];
+			const type = statement.data[2] ? statement.data[2] : expr?.type;
 
 			if (!type)
-				throw `Cannot declare variable without an expression or type annotation`;
+				statement.throw(`Cannot declare variable without an expression or type annotation`);
 
 			if (scope.has(name))
-				throw `Cannot redeclare existing variable ${name}`;
+				statement.throw(`Cannot redeclare existing variable ${name}`);
 
 			if (expr && type != expr.type)
-				throw `Declaration annotated as type ${type} cannot be given expression of type ${expr.type}`;
+				statement.throw(`Declaration annotated as type ${type} cannot be given expression of type ${expr.type}`);
 
 			const [str, id] = [`${name}${scopes.length}`, interner.size];
 			if (!interner.has(str))
@@ -230,34 +230,34 @@ export function analyze(src: string): IREvent[] {
 				return ["noop"];
 			}
 		} else if (kind == "assign") {
-			const [name, expr] = [statement[1], analyzeExpr(statement[2])];
+			const [name, expr] = [statement.data[1], analyzeExpr(statement.data[2])];
 
 			const v = lookupVariable(name);
 			if (!v)
-				throw `Variable ${name} has not been declared. Maybe you meant let ${name}?`;
+				statement.throw(`Variable ${name} has not been declared. Maybe you meant let ${name}?`);
 
 			if (v.type != expr.type)
-				throw `Cannot assign value of ${expr.type} to variable of type ${v.type}`;
+				statement.throw(`Cannot assign value of ${expr.type} to variable of type ${v.type}`);
 
 			if (v.data[0] == "constant")
-				throw `Cannot assign to constant ${name}`;
+				statement.throw(`Cannot assign to constant ${name}`);
 
 			return ["assign", v.data[1] as number, expr];
 		} else if (kind == "call") {
-			const [name, args] = [statement[1], statement[2].map(analyzeExpr)];
+			const [name, args] = [statement.data[1], statement.data[2].map(analyzeExpr)];
 
 			const fn = FUNCTIONS[name];
 			if (!fn)
-				throw `No such function ${name}`;
+				statement.throw(`No such function ${name}`);
 
 			const types = args.map(x => x.type);
 			outer: for (const expected of fn.args) {
 				if (types.length == 0) {
 					if (expected.default) {
-						args.push(analyzeExpr(expected.default));
+						args.push(analyzeExpr({ location: statement.location, data: expected.default, throw: 0 as any }));
 						continue;
 					} else {
-						throw `Not enough arguments passed to ${name}, expected ${expected.type}`;
+						statement.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
 					}
 				}
 
@@ -271,30 +271,38 @@ export function analyze(src: string): IREvent[] {
 					continue;
 				}
 
-				throw `Expected ${expected.type}, got ${given}`;
+				statement.throw(`Expected ${expected.type}, got ${given}`);
 			}
 
 			return ["call", fn.ow, args];
 		}
 
-		throw `Unreachable`;
+		return kind; // return "never", mark as unreachable.
 	};
 
 	const out: IREvent[] = [];
 	for (const obj of ast) {
-		if (obj[0] == "function") {
-			const [, _name, _params, _block] = obj;
-			throw `TODO: Functions`;
+		if (obj.data[0] == "function") {
+			const [, _name, _params, _block] = obj.data;
+			throw {
+				location: {
+					start: { column: 1, line: 1 },
+					end: { column: 1, line: 1 }
+				},
+				message: "TODO: Functions"
+			}
 		} else {
-			const [, name, args, block] = obj;
+			const [, name, args, block] = obj.data;
 
 			const event = EVENTS[name];
 
+			console.log(obj.location);
+
 			if (!event)
-				throw `Event ${name} does not exist.`;
+				obj.throw(`Event ${name} does not exist.`);
 
 			if (event.args.length != args.length)
-				throw `Event ${name} has ${event.args.length} arguments.`;
+				obj.throw(`Event ${name} has ${event.args.length} arguments.`);
 
 			scope = new Map();
 			for (const [i, arg] of args.entries()) {

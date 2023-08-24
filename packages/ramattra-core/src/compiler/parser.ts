@@ -12,51 +12,67 @@ const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(templa
  *  Compound Assignment => Assignment
  */
 export const Parser = peg`
+{{
+	class Node {
+		constructor(location, data) {
+			this.location = location;
+			this.data = data;
+		}
+
+		throw(msg) {
+			throw {
+				location: this.location,
+				message: msg
+			}
+		}
+	}
+}}
+
 Top =
 	_ @(Function / Event)|.., _| _
 
 Function =
-	"function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block { return ["function", name, params, block] }
+	"function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["function", name, params, block]) }
 
 Event =
-	"event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block { return ["event", name, args, block] }
+	"event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["event", name, args, block]) }
 
 Block =
-	"{" _ stmts:Stmt|.., _ ";"? _| ";"? _ "}" { return ["block", stmts] }
+	"{" _ stmts:Stmt|.., _ ";"? _| ";"? _ "}" { return new Node(location(), ["block", stmts]) }
 
 Stmt =
-	"if" _ cond:Expr _ block:Block { return ["if", cond, block] }
+	"if" _ cond:Expr _ block:Block { return new Node(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr ".." end:Expr _ block:Block {
-		return ["block", [
+		return new Node(location(), ["block", [
 			["let", marker, "number", start],
 			["while", ["<", ["ident", marker], end], block]
-		]]
+		]])
 	}
-	/ "while" _ cond:Expr _ block:Block { return ["while", cond, block] }
-	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return ["let", name, type, value] }
-	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return ["assign", name, [op, ["ident", name], value]] }
-	/ name:ident _ "=" _ value:Expr { return ["assign", name, value] }
-	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", mname, [obj, ...args]] }
-	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", name, args] }
+	/ "while" _ cond:Expr _ block:Block { return new Node(location(), ["while", cond, block]) }
+	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return new Node(location(), ["let", name, type, value]) }
+	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return new Node(location(), ["assign", name, [op, ["ident", name], value]]) }
+	/ name:ident _ "=" _ value:Expr { return new Node(location(), ["assign", name, value]) }
+	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
+	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 
 BaseExpr =
 	"(" _ @Expr _ ")"
-	/ op:("!" / "typeof") _ expr:Expr { return [op, expr] }
-	/ '"' inner:[^"]+ '"' { return ["string", inner.join("")] }
-	/ ( "true" / "false" ) { return ["boolean", text() == "true"] }
-	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return ["array", type, items] }
-	/ [0-9]+ "." [0-9]+ { return ["number", parseFloat(text())] }
-	/ "0b" [0-1]+ { return ["number", parseInt(text().substring(2), 2)] }
-	/ "0x" [0-9a-fA-F]+ { return ["number", parseInt(text().substring(2), 16)] }
-	/ [0-9]+ { return ["number", parseInt(text())] }
-	/ args:ident|.., _ "," _| _ "=>" _ ret:Expr { return ["lambda", args, ret] }
-	/ ident:ident { return ["ident", ident] }
+	/ op:("!" / "typeof") _ expr:Expr { return new Node(location(), [op, expr]) }
+	/ '"' inner:[^"]+ '"' { return new Node(location(), ["string", inner.join("")]) }
+	/ ( "true" / "false" ) { return new Node(location(), ["boolean", text() == "true"]) }
+	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return new Node(location(), ["array", type, items]) }
+	/ [0-9]+ "." [0-9]+ { return new Node(location(), ["number", parseFloat(text())]) }
+	/ "0b" [0-1]+ { return new Node(location(), ["number", parseInt(text().substring(2), 2)]) }
+	/ "0x" [0-9a-fA-F]+ { return new Node(location(), ["number", parseInt(text().substring(2), 16)]) }
+	/ [0-9]+ { return new Node(location(), ["number", parseInt(text())]) }
+	/ args:ident|.., _ "," _| _ "=>" _ ret:Expr { return new Node(location(), ["lambda", args, ret]) }
+	/ ident:ident { return new Node(location(), ["ident", ident]) }
 
 Expr "expression" =
-	lhs:BaseExpr _ op:("+" / "-" / "*" / "/" / "==" / "!=" / ">=" / ">" / "<" / "<=" / "||" / "&&") _ rhs:Expr { return [op, lhs, rhs] }
-	/ obj:BaseExpr "[" _ index:Expr _ "]" { return ["index", obj, index] }
-	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", mname, [obj, ...args]] }
-	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return ["call", name, args] }
+	lhs:BaseExpr _ op:("+" / "-" / "*" / "/" / "==" / "!=" / ">=" / ">" / "<" / "<=" / "||" / "&&") _ rhs:Expr { return new Node(location(), [op, lhs, rhs]) }
+	/ obj:BaseExpr "[" _ index:Expr _ "]" { return new Node(location(), ["index", obj, index]) }
+	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
+	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 	/ BaseExpr
 
 ident "identifier" =
@@ -72,7 +88,35 @@ _ =
 	(ws / comment)*
 `;
 
-export type Stmt =
+export type Location = {
+	source: string,
+	start: {
+		offset: number,
+		line: number,
+		column: number
+	},
+	end: {
+		offset: number,
+		line: number,
+		column: number
+	}
+}
+
+export type Error = {
+	location: Location,
+	message: string
+}
+
+declare class Node<T> {
+	location: Location
+	data: T
+
+	throw(msg: string): never;
+}
+
+export type Stmt = Node<StmtData>
+
+type StmtData =
 	["block", Stmt[]]
 	| ["if", Expr, Stmt]
 	| ["while", Expr, Stmt]
@@ -80,7 +124,9 @@ export type Stmt =
 	| ["assign", string, Expr]
 	| ["call", string, Expr[]];
 
-export type Expr =
+export type Expr = Node<ExprData>
+
+export type ExprData =
 	["+", Expr, Expr] |
 	["-", Expr, Expr] |
 	["*", Expr, Expr] |
@@ -108,18 +154,17 @@ export type Expr =
 	["array", string | null, Expr[]] |
 	["number", number]
 
-export type Function
-	= ["function", string, string[], Stmt];
-
-export type Event
-	= ["event", string, string[], Stmt];
+export type Function = Node<["function", string, string[], Stmt]>;
+export type Event = Node<["event", string, string[], Stmt]>;
 
 export function parse(src: string): (Function | Event)[] {
 	try {
 		return Parser.parse(src, { grammarSource: "input.ram" });
 	} catch (e: any) {
-		throw e.format([
-			{ source: "input.ram", text: src }
-		]);
+		throw {
+			// display: () => e.format([{ source: "input.ram", text: src }]),
+			message: e.message,
+			location: e.location
+		};
 	}
 }

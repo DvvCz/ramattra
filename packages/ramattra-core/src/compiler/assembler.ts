@@ -55,7 +55,7 @@ export function assemble(src: string): string {
 			return expr.data[1].toString();
 		}
 
-		throw `Unreachable`;
+		return kind;
 	}
 
 	const statement = (stmt: IRStmt): string => {
@@ -99,7 +99,7 @@ export function assemble(src: string): string {
 			return "";
 		}
 
-		throw `Unreachable`;
+		return kind;
 	}
 
 	for (const obj of ast) {

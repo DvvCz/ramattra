@@ -6,7 +6,7 @@ import {
 	TextDocument
 } from "vscode-languageserver-textdocument";
 
-import { analyze } from "@ramattra/ramattra-core";
+import { analyze, type Error } from "@ramattra/ramattra-core";
 
 // Creates the LSP connection
 const connection = createConnection();
@@ -45,13 +45,15 @@ async function validateDocument(document: TextDocument) {
 	try {
 		analyze(text);
 	} catch (err) {
+		const error = err as Error;
+
 		diagnostics.push({
 			severity: DiagnosticSeverity.Error,
 			range: {
-				start: document.positionAt(0),
-				end: document.positionAt(0)
+				start: { character: error.location.start.column, line: error.location.start.line },
+				end: { character: error.location.end.column, line: error.location.end.line },
 			},
-			message: `${err}`,
+			message: error.message,
 			source: "Ramattra Language Server"
 		});
 	}

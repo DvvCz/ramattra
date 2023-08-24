@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { assemble, parse } from "@ramattra/ramattra-core";
 import * as fs from "node:fs/promises";
+import { Error } from "@ramattra/ramattra-core/src/compiler/parser";
 
 const program = new Command();
 
@@ -44,7 +45,7 @@ program
 					console.log(compiled);
 				}
 			} catch (err) {
-				console.error(`Failed to parse: ${err}`);
+				console.error(`Failed to parse: ${(err as Error).message} at ${(err as Error).location.start.line}`);
 			}
 		} catch (err) {
 			console.error(`Failed to read file ${input}: ${err}`);

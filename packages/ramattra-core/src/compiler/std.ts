@@ -1,4 +1,4 @@
-import { Expr } from "./parser";
+import { ExprData } from "./parser";
 
 export const EVENTS: Record<string, { ow: string, args: { type: string, ow: string }[] }> = {
 	"client": {
@@ -147,7 +147,7 @@ export const CONSTANTS: Record<string, { ow: string, type: string }> = {
 	"ROUND_DOWN": { ow: "Down", type: "rounding" },
 };
 
-export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: Expr }[], ret?: string } | undefined> = {
+export const FUNCTIONS: Record<string, { ow: string, args: { type: string, default?: ExprData }[], ret?: string } | undefined> = {
 	"disableGameModeHUD": { ow: "Disable Game Mode HUD", args: [{ type: "player" }] },
 
 	"createHUDText": {
