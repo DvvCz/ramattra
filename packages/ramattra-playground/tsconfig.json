@@ -13,6 +13,9 @@
 	"references": [
 		{
 			"path": "../ramattra-core"
+		},
+		{
+			"path": "../ramattra-language-server"
 		}
 	]
 }

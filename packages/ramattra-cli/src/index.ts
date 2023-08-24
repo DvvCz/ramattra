@@ -45,7 +45,7 @@ program
 					console.log(compiled);
 				}
 			} catch (err) {
-				console.error(`Failed to parse: ${(err as Error).message} at ${(err as Error).location.start.line}`);
+				console.error(`Failed to parse: ${(err as Error).message} at line ${(err as Error).location.start.line}, column ${(err as Error).location.start.column}`);
 			}
 		} catch (err) {
 			console.error(`Failed to read file ${input}: ${err}`);

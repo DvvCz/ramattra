@@ -188,7 +188,7 @@ export function analyze(src: string): IREvent[] {
 			return v;
 		}
 
-		expr.throw(`Unreachable`);
+		return kind;
 	};
 
 	const analyzeStmt = (statement: Stmt): IRStmt => {
@@ -295,8 +295,6 @@ export function analyze(src: string): IREvent[] {
 			const [, name, args, block] = obj.data;
 
 			const event = EVENTS[name];
-
-			console.log(obj.location);
 
 			if (!event)
 				obj.throw(`Event ${name} does not exist.`);

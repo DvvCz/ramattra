@@ -7,5 +7,10 @@
 	"exclude": [
 		"tests",
 		"dist"
+	],
+	"references": [
+		{
+			"path": "../ramattra-core"
+		}
 	]
 }
