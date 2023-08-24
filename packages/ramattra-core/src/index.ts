@@ -1,3 +1,5 @@
+export { FUNCTIONS, CONSTANTS, EVENTS } from "./compiler/std.js";
+
 export { parse } from "./compiler/parser.js";
 export type { Error } from "./compiler/parser.js";
 
