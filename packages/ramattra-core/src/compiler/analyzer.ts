@@ -159,9 +159,9 @@ export function analyze(src: string): IREvent[] {
 
 			return { type: fn.ret ?? "!", data: ["call", fn.ow, args] };
 		} else if (kind == "!") {
-			return { type: "boolean", data: [kind, analyzeExpr(expr)] };
+			return { type: "boolean", data: [kind, analyzeExpr(expr.data[1])] };
 		} else if (kind == "typeof") {
-			const value = analyzeExpr(expr);
+			const value = analyzeExpr(expr.data[1]);
 			return { type: "string", data: ["string", value.type] };
 		} else if (kind == "string" || kind == "boolean" || kind == "number") {
 			return { type: kind, data: [kind as any, expr.data[1]] };

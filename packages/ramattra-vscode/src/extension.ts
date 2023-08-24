@@ -1,51 +1,27 @@
-/* --------------------------------------------------------------------------------------------
- * Copyright (c) Microsoft Corporation. All rights reserved.
- * Licensed under the MIT License. See License.txt in the project root for license information.
- * ------------------------------------------------------------------------------------------ */
-
 import * as path from "path";
-import { workspace, ExtensionContext } from "vscode";
+import { ExtensionContext } from "vscode";
 
 import {
 	LanguageClient,
-	LanguageClientOptions,
-	ServerOptions,
-	TransportKind
 } from "vscode-languageclient/node";
 
 let client: LanguageClient;
 
 export function activate(context: ExtensionContext) {
-	// The server is implemented in node
-	const serverModule = context.asAbsolutePath(
-		path.join("..", "ramattra-language-server", "dist", "node.js")
-	);
+	const module = context.asAbsolutePath(path.join("..", "ramattra-language-server", "dist", "node.js"));
 
-	// If the extension is launched in debug mode then the debug server options are used
-	// Otherwise the run options are used
-	const serverOptions: ServerOptions = {
-		run: { module: serverModule, transport: TransportKind.ipc },
-		debug: {
-			module: serverModule,
-			transport: TransportKind.ipc,
-		}
-	};
-
-	// Options to control the language client
-	const clientOptions: LanguageClientOptions = {
-		documentSelector: [{ scheme: "file", language: "ramattra" }],
-		synchronize: {
-			// Notify the server about file changes to ".clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher("**/.clientrc")
-		}
-	};
-
-	// Create the language client and start the client.
 	client = new LanguageClient(
 		"ramattra-language-server",
 		"Ramattra Language Server",
-		serverOptions,
-		clientOptions
+		{
+			run: { module },
+			debug: { module }
+		},
+		{
+			documentSelector: [
+				{ scheme: "file", language: "ramattra" }
+			]
+		}
 	);
 
 	// Start the client. This will also launch the server
@@ -53,8 +29,5 @@ export function activate(context: ExtensionContext) {
 }
 
 export function deactivate(): Thenable<void> | undefined {
-	if (!client) {
-		return undefined;
-	}
-	return client.stop();
+	return client?.stop();
 }

@@ -113,6 +113,10 @@
 					]
 				},
 				{
+					"name": "constant.language",
+					"match": "true|false"
+				},
+				{
 					"name": "variable.name",
 					"match": "\\w+"
 				}
@@ -135,7 +139,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control",
-					"match": "\\b(event|function|if|else|let|while|for|in)\\b"
+					"match": "\\b(event|function|typeof|if|else|let|while|for|in)\\b"
 				}
 			]
 		},

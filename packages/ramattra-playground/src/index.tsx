@@ -54,8 +54,6 @@ const App = () => {
 
 
 	function compile() {
-		assemble(inCode);
-
 		try {
 			setOutCode(assemble(inCode));
 			setPopupMessage("Successfully compiled code");
@@ -117,7 +115,7 @@ const App = () => {
 				<CodeMirror
 					value={inCode}
 					height="85.7dvh"
-					indent
+					indentWithTab={true}
 					theme={vscodeDark}
 					onChange={setInCode}
 					extensions={[...ls, styling, javascript({ jsx: true })]}
