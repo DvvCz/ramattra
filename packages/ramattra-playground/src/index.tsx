@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useState } from "preact/hooks";
 
-import { assemble } from "@ramattra/ramattra-core";
+import { Error, assemble } from "@ramattra/ramattra-core";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { EditorView } from "@codemirror/view";
@@ -27,16 +27,16 @@ const ls = languageServerWithTransport({
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
 const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
-	let players = [victim, attacker]
+  let players = [victim, attacker]
 
-	players.setInvisible()
-	players.createHUDText("Header")
+  players.setInvisible()
+  players.createHUDText("Header")
 
-	let numbers = [1, 2, 3, 4, 5]
+  let numbers = [1, 2, 3, 4, 5]
 
-	for i in 0..5 {
-		let num = numbers[i]
-	}
+  for i in 0..5 {
+    let num = numbers[i]
+  }
 }`;
 
 const styling = EditorView.baseTheme({
@@ -54,11 +54,14 @@ const App = () => {
 
 
 	function compile() {
+		assemble(inCode);
+
 		try {
 			setOutCode(assemble(inCode));
 			setPopupMessage("Successfully compiled code");
 		} catch (err) {
-			setOutCode(`Failed: ${err}`);
+			const error = err as Error;
+			setOutCode(`Failed: ${error.message}`);
 			setPopupMessage("Failed to compile code");
 		}
 

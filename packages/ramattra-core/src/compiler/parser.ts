@@ -44,13 +44,13 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return new Node(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr ".." end:Expr _ block:Block {
 		return new Node(location(), ["block", [
-			["let", marker, "number", start],
-			["while", ["<", ["ident", marker], end], block]
+			new Node(location(), ["let", marker, "number", start]),
+			new Node(location(), ["while", ["<", ["ident", marker], end], block])
 		]])
 	}
 	/ "while" _ cond:Expr _ block:Block { return new Node(location(), ["while", cond, block]) }
 	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return new Node(location(), ["let", name, type, value]) }
-	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return new Node(location(), ["assign", name, [op, ["ident", name], value]]) }
+	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return new Node(location(), ["assign", name, new Node(location(), [op, ["ident", name], value])]) }
 	/ name:ident _ "=" _ value:Expr { return new Node(location(), ["assign", name, value]) }
 	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
