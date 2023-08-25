@@ -74,7 +74,6 @@ export function analyze(src: string): IREvent[] {
 
 	const analyzeExpr = (expr: Expr): IRExpr => {
 		const kind = expr.data[0];
-
 		const solver = new TypeSolver();
 
 		if (kind == "+") {
@@ -188,6 +187,8 @@ export function analyze(src: string): IREvent[] {
 
 	const analyzeStmt = (statement: Stmt): IRStmt => {
 		const kind = statement.data[0];
+		const solver = new TypeSolver();
+
 		if (kind == "block") {
 			scope = new Map();
 
@@ -210,8 +211,8 @@ export function analyze(src: string): IREvent[] {
 			if (scope.has(name))
 				statement.throw(`Cannot redeclare existing variable ${name}`);
 
-			if (expr && type != expr.type)
-				statement.throw(`Declaration annotated as type ${type} cannot be given expression of type ${expr.type}`);
+			if (expr && !solver.satisfies(type, expr.type))
+				statement.throw(`Declaration annotated as type ${reprType(type)} cannot be given expression of type ${reprType(expr.type)}`);
 
 			const [str, id] = [`${name}${scopes.length}`, interner.size];
 			if (!interner.has(str))
