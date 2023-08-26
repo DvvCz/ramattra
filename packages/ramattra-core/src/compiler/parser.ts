@@ -124,6 +124,7 @@ type StmtData =
 	| ["while", Expr, Stmt]
 	| ["let", string, string, Expr | null]
 	| ["assign", string, Expr]
+	| ["iassign", Expr, string, Expr]
 	| ["call", string, Expr[]];
 
 export type Expr = Node<ExprData>

@@ -90,6 +90,11 @@ export function assemble(src: string): string {
 			return dedent`
 				Set Global Variable At Index(Vars, ${id}, ${expression(expr)});
 			`;
+		} else if (kind == "iassign") {
+			const [, obj, index, value] = stmt;
+			return dedent`
+				Set Player Variable(${obj}, ${index}, ${value});
+			`;
 		} else if (kind == "call") {
 			const [, name, args] = stmt;
 			return dedent`

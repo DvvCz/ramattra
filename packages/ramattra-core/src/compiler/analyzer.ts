@@ -8,6 +8,7 @@ export type IRStmt =
 	| ["while", IRExpr, IRStmt]
 	| ["let", number, Type, IRExpr]
 	| ["assign", number, IRExpr]
+	| ["iassign", IRExpr, string, IRExpr]
 	| ["call", string, IRExpr[]]
 	| ["noop"]
 
@@ -142,13 +143,13 @@ export function analyze(src: string): IREvent[] {
 					} else if (expected.type.kind == "variadic") {
 						break;
 					} else {
-						expr.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
+						expr.throw(`Not enough arguments passed to ${name}, expected ${reprType(expected.type)}`);
 					}
 				}
 
 				const given = types.shift()!;
 				if (!solver.satisfies(expected.type, given))
-					expr.throw(`Expected ${expected.type}, got ${given}`)
+					expr.throw(`Expected ${reprType(expected.type)}, got ${reprType(given)}`)
 			}
 
 			return { type: fn.ret ?? nothing, data: ["call", fn.ow, args] };
@@ -214,6 +215,9 @@ export function analyze(src: string): IREvent[] {
 			if (expr && !solver.satisfies(type, expr.type))
 				statement.throw(`Declaration annotated as type ${reprType(type)} cannot be given expression of type ${reprType(expr.type)}`);
 
+			if (interner.size >= 1000)
+				statement.throw(`Cannot use more than 1000 variables, for now.`);
+
 			const [str, id] = [`${name}${scopes.length}`, interner.size];
 			if (!interner.has(str))
 				interner.set(str, id);
@@ -255,16 +259,23 @@ export function analyze(src: string): IREvent[] {
 						args.push({ type: expected.type, data: ["constant", expected.default] });
 						continue;
 					} else {
-						statement.throw(`Not enough arguments passed to ${name}, expected ${expected.type}`);
+						statement.throw(`Not enough arguments passed to ${name}, expected ${reprType(expected.type)}`);
 					}
 				}
 
 				const given = types.shift()!;
 				if (!solver.satisfies(expected.type, given))
-					statement.throw(`Expected ${expected.type}, got ${given}`)
+					statement.throw(`Expected ${reprType(expected.type)}, got ${reprType(given)}`)
 			}
 
 			return ["call", fn.ow, args];
+		} else if (kind == "iassign") {
+			const [obj, index, value] = [analyzeExpr(statement.data[1]), statement.data[2], analyzeExpr(statement.data[3])];
+
+			if (!solver.satisfies(obj.type, native("player")))
+				statement.throw(`Can only use indexing assignment on player`);
+
+			return ["iassign", obj, index, value];
 		}
 
 		return kind; // return "never", mark as unreachable.
