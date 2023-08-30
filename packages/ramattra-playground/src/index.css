@@ -8,7 +8,7 @@ body {
 	width: 100dvw;
 	height: 100dvh;
 
-	font-family: 'Inter', sans-serif;
+	font-family: "Inter", sans-serif;
 
 	--color-ram: #713dc5;
 	--color-toolbar: #313131;
@@ -140,15 +140,6 @@ body {
 				}
 			}
 		}
-
-		.input {
-			height: 94%;
-			outline: none;
-			background-color: var(--color-input);
-			color: white;
-			border: none;
-			resize: none;
-		}
 	}
 
 	.panel {
@@ -175,7 +166,7 @@ body {
 			background-color: var(--color-output);
 			color: white;
 			font-size: smaller;
-			overflow-x: scroll;
+			overflow-x: auto;
 			overflow-y: clip;
 
 			margin-left: 3%;

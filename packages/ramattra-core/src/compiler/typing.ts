@@ -117,6 +117,14 @@ export class TypeSolver {
 					return true;
 				}
 			}
+		} else if (lhs.kind == "union") {
+			if (rhs.kind == "union") {
+				// number | string -> number | string | boolean (false)
+				// number | string -> number | string (true)
+				return rhs.types.every(ty => this.satisfies(ty, lhs));
+			} else {
+				return lhs.types.some(ty => this.satisfies(ty, rhs));
+			}
 		} else if (lhs.kind == "native" && rhs.kind == "native") {
 			return lhs.name == rhs.name;
 		}

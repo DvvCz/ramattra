@@ -1,49 +1,25 @@
 import { render } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
 import { Error, assemble } from "@ramattra/ramattra-core";
-
-import CodeMirror from "@uiw/react-codemirror";
-import { EditorView } from "@codemirror/view";
-import { javascript } from "@codemirror/lang-javascript";
-import { vscodeDark } from "@uiw/codemirror-theme-vscode";
-
-import { languageServerWithTransport } from "codemirror-languageserver";
-import { PostMessageWorkerTransport } from "./transport";
-
-/** @ts-ignore */
-import RamattraWorker from "@ramattra/ramattra-language-server/src/browser?worker";
-
-const worker = new RamattraWorker();
-
-const ls = languageServerWithTransport({
-	transport: new PostMessageWorkerTransport(worker),
-	rootUri: "file:///",
-	workspaceFolders: null,
-	documentUri: "file:///tsconfig.json",
-	languageId: "json"
-});
 
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
 const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
-  let players = [victim, attacker]
+	let players = [victim, attacker]
 
-  players.setInvisible()
-  players.createHUDText("Header")
+	players.setInvisible()
+	players.createHUDText("Header")
 
-  let numbers = [1, 2, 3, 4, 5]
+	let numbers = [1, 2, 3, 4, 5]
 
-  for i in 0..5 {
-    let num = numbers[i]
-  }
+	for i in 0..5 {
+		let num = numbers[i]
+	}
 }`;
 
-const styling = EditorView.baseTheme({
-	"&": {
-		fontSize: "19px",
-	}
-});
+import { Editor, useMonaco } from "@monaco-editor/react";
+import monarch from "./lib/monarch";
 
 const App = () => {
 	const [inCode, setInCode] = useState(defaultCode);
@@ -52,6 +28,12 @@ const App = () => {
 	const [popupVisible, setPopupVisible] = useState("hidden");
 	const [popupMessage, setPopupMessage] = useState("");
 
+	const monaco = useMonaco();
+
+	useEffect(() => {
+		monaco?.languages.register({ id: "ramattra" });
+		monaco?.languages.setMonarchTokensProvider("ramattra", monarch as any);
+	}, [monaco]);
 
 	function compile() {
 		try {
@@ -84,8 +66,8 @@ const App = () => {
 	return <>
 		<div class="top">
 			<div class="logo">
-				<button>
-					<a href="https://github.com/DvvCz/Ramattra">
+				<button aria-label="GitHub Logo">
+					<a aria-label="GitHub Repository" href="https://github.com/DvvCz/Ramattra">
 						<i class="fa-brands fa-github"></i>
 					</a>
 				</button>
@@ -112,13 +94,14 @@ const App = () => {
 					<button onClick={share}>Share</button>
 				</div>
 
-				<CodeMirror
+				<Editor
 					value={inCode}
-					height="85.7dvh"
+					options={{ fontSize: 20, insertSpaces: false, detectIndentation: false, tabSize: 4, renderWhitespace: "all", lineNumbersMinChars: 4 }}
+					height="94%"
 					indentWithTab={true}
-					theme={vscodeDark}
+					theme={"vs-dark"}
+					language={"ramattra"}
 					onChange={setInCode}
-					extensions={[...ls, styling, javascript({ jsx: true })]}
 				/>
 			</div>
 
