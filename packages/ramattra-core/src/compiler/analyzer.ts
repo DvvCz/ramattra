@@ -46,9 +46,6 @@ type IRExprData =
 export type IREvent =
 	["event", string, string, IRStmt];
 
-export type IRFunction =
-	["function", string, string[], IRStmt];
-
 type Scope = Map<string, IRExpr>;
 
 export function analyze(src: string): IREvent[] {
@@ -283,39 +280,51 @@ export function analyze(src: string): IREvent[] {
 
 	const out: IREvent[] = [];
 	for (const obj of ast) {
-		if (obj.data[0] == "function") {
-			const [, _name, _params, _block] = obj.data;
-			throw {
-				location: {
-					start: { column: 1, line: 1 },
-					end: { column: 1, line: 1 }
-				},
-				message: "TODO: Functions"
-			}
-		} else {
-			const [, name, args, block] = obj.data;
+		switch (obj.data[0]) {
+			case "function":
+				const [, _name, _params, _block] = obj.data;
+				throw {
+					location: {
+						start: { column: 1, line: 1 },
+						end: { column: 1, line: 1 }
+					},
+					message: "TODO: Functions"
+				}
+			case "event":
+				const [, name, args, block] = obj.data;
 
-			const event = EVENTS[name];
+				const event = EVENTS[name];
 
-			if (!event)
-				obj.throw(`Event ${name} does not exist.`);
+				if (!event)
+					obj.throw(`Event ${name} does not exist.`);
 
-			if (event.args.length != args.length)
-				obj.throw(`Event ${name} has ${event.args.length} arguments.`);
+				if (event.args.length != args.length)
+					obj.throw(`Event ${name} has ${event.args.length} arguments.`);
 
-			scope = new Map();
-			for (const [i, arg] of args.entries()) {
-				const registered = event.args[i];
-				scope.set(arg, { type: registered.type, data: ["constant", registered.ow] });
-			}
+				scope = new Map();
+				for (const [i, arg] of args.entries()) {
+					const registered = event.args[i];
+					scope.set(arg, { type: registered.type, data: ["constant", registered.ow] });
+				}
 
-			scopes.push(scope);
+				scopes.push(scope);
 
-			const b = analyzeStmt(block);
+				const b = analyzeStmt(block);
 
-			scope = scopes.pop()!;
+				scope = scopes.pop()!;
 
-			out.push(["event", name, event.ow, b]);
+				out.push(["event", name, event.ow, b]);
+				break
+			case "type":
+				throw {
+					location: {
+						start: { column: 1, line: 1 },
+						end: { column: 1, line: 1 }
+					},
+					message: "TODO: Type definition"
+				}
+			default:
+				return obj.data[0]
 		}
 	}
 

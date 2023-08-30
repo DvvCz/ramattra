@@ -1,4 +1,5 @@
 import * as peggy from "peggy";
+import { Type } from "./typing";
 
 /* c8 ignore next 1: Testing variable check. */
 const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(template), process.env.NODE_ENV == "test" ? { allowedStartRules: ["*"] } : undefined);
@@ -29,13 +30,16 @@ export const Parser = peg`
 }}
 
 Top =
-	_ @(Function / Event)|.., _| _
+	_ @(Function / Event / TypeDef)|.., _| _
 
 Function =
 	"function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["function", name, params, block]) }
 
 Event =
 	"event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["event", name, args, block]) }
+
+TypeDef =
+	"type" _ name:ident _ "=" _ type:Type { return new Node(location(), ["type", name, type]) }
 
 Block =
 	"{" _ stmts:Stmt|.., _ ";"? _| ";"? _ "}" { return new Node(location(), ["block", stmts]) }
@@ -81,6 +85,16 @@ Expr "expression" =
 	/ obj:BaseExpr "." mname:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", mname, [obj, ...args]]) }
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 	/ BaseExpr
+
+BaseType =
+	"..." type:Type { return { kind: "variadic", type } }
+	/ "fn(" _ params:Type|.., _ "," _| _ ")" ret:(_ "->" _ @Type)? { return { kind: "function", params, ret: ret ?? { kind: "native", name: "void" } } }
+	/ name:ident { return { kind: "native", name } }
+
+Type "type" =
+	/ type:BaseType "[]" { return { kind: "array", type } }
+	/ types:BaseType|1.., _ "|" _| { return { kind: "union", types } }
+	/ BaseType
 
 ident "identifier" =
 	[a-zA-Z_][a-zA-Z0-9_]* { return text() }
@@ -163,9 +177,10 @@ export type ExprData =
 	["number", number]
 
 export type Function = Node<["function", string, string[], Stmt]>;
+export type TypeDef = Node<["type", string, Type]>;
 export type Event = Node<["event", string, string[], Stmt]>;
 
-export function parse(src: string): (Function | Event)[] {
+export function parse(src: string): (Function | Event | TypeDef)[] {
 	try {
 		return Parser.parse(src, { grammarSource: "input.ram" });
 	} catch (e: any) {
