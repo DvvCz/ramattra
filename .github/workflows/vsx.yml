@@ -2,6 +2,7 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
 
 name: Deploy Extension
 jobs:
@@ -21,5 +22,5 @@ jobs:
       - name: Publish to Open VSX Registry
         uses: HaaLeo/publish-vscode-extension@v1
         with:
-          packagePath: "./packages/ramattra-vscode/dist"
+          packagePath: "./packages/ramattra-vscode"
           pat: ${{ secrets.OPEN_VSX_TOKEN }}
