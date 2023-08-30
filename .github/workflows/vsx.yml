@@ -1,0 +1,25 @@
+on:
+  push:
+    tags:
+      - "*"
+
+name: Deploy Extension
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 16
+
+      - name: Setup
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish to Open VSX Registry
+        uses: HaaLeo/publish-vscode-extension@v1
+        with:
+          packagePath: "./packages/ramattra-vscode/dist"
+          pat: ${{ secrets.OPEN_VSX_TOKEN }}

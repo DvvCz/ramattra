@@ -2,10 +2,9 @@
 	"name": "@ramattra/ramattra-vscode",
 	"displayName": "Ramattra",
 	"author": "David Cruz",
-	"publisher": "David Cruz",
-	"description": "Language server for ramattra",
+	"publisher": "dvvcz",
+	"description": "VSCode LSP Client for Ramattra",
 	"version": "0.1.0",
-	"private": true,
 	"repository": "https://github.com/DvvCz/Ramattra",
 	"main": "dist/extension.js",
 	"engines": {
@@ -38,9 +37,7 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"vscode-languageclient": "^8.1.0",
-		"vscode-languageserver": "^8.1.0",
-		"vscode-languageserver-textdocument": "^1.0.8"
+		"vscode-languageclient": "^8.1.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.81.0"
