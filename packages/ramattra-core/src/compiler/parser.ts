@@ -92,7 +92,7 @@ BaseType =
 	/ name:ident { return { kind: "native", name } }
 
 Type "type" =
-	/ type:BaseType "[]" { return { kind: "array", type } }
+	type:BaseType "[]" { return { kind: "array", type } }
 	/ types:BaseType|1.., _ "|" _| { return { kind: "union", types } }
 	/ BaseType
 

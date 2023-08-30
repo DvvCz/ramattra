@@ -10,31 +10,17 @@ A language similar to Typescript that compiles to [Overwatch Workshop Scripts](h
 ## Example
 
 ```ts
-event playerDied(victim, attacker, damage, crit, ability, dir) { // Explicit event variables.
-	let players = [victim, attacker]
+event playerDied(victim, attacker, damage, crit, ability, dir) {
+	let players = [victim, attacker];
 
-	players.setInvisible(INVISIBLE_TO_ALL) // Enums as constants
-	players.createHUDText(
-		"Header",
-		"Subheader",
-		"Text",
+	let strings = ["foo", "bar", "baz"];
+	let buffer = "";
 
-		HUD_LEFT,
-		2,
-
-		COLOR_RED,
-		COLOR_WHITE,
-		COLOR_BLUE,
-
-		HUDEVAL_NONE,
-		SPECTATOR_VISIBLE_DEFAULT
-	)
-
-	let numbers = <number>[1, 2, 3, 4, 5] // Can annotate array type
-
-	for i in 0..5 {
-		let num = numbers[i]
+	for i in 0 .. strings.count() {
+		buffer += strings[i];
 	}
+
+	players.createHUDText(buffer);
 }
 ```
 
