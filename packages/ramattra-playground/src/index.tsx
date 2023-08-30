@@ -19,7 +19,7 @@ const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDie
 }`;
 
 import { Editor, useMonaco } from "@monaco-editor/react";
-import monarch from "./lib/monarch";
+import monarch from "./monarch";
 
 const App = () => {
 	const [inCode, setInCode] = useState(defaultCode);
