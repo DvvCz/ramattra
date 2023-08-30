@@ -45,7 +45,12 @@ Stmt =
 	/ "for" _ marker:ident _ "in" _ start:Expr _ ".." _ end:Expr _ block:Block {
 		return new Node(location(), ["block", [
 			new Node(location(), ["let", marker, "number", start]),
-			new Node(location(), ["while", new Node(location(), ["<", new Node(location(), ["ident", marker]), end]), block])
+			new Node(location(), ["while", new Node(location(), ["<", new Node(location(), ["ident", marker]), end]),
+				new Node(location(), ["block", [
+					block,
+					new Node(location(), ["assign", marker, new Node(location(), ["+", new Node(location(), ["ident", marker]), new Node(location(), ["number", 1])])])
+				]])
+			])
 		]])
 	}
 	/ "while" _ cond:Expr _ block:Block { return new Node(location(), ["while", cond, block]) }
