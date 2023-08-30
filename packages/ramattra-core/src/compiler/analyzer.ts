@@ -117,8 +117,8 @@ export function analyze(src: string): IREvent[] {
 		} else if (kind == "index") {
 			const [obj, index] = [analyzeExpr(expr.data[1]), analyzeExpr(expr.data[2])];
 
-			if (!solver.satisfies(obj.type, array(any)))
-				expr.throw(`Cannot index non array type`);
+			if (!solver.satisfies(array(any), obj.type))
+				expr.throw(`Cannot index type of ${reprType(obj.type)}`);
 
 			if (!solver.satisfies(index.type, number))
 				expr.throw(`Can only index an array with a number`);
