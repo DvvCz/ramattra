@@ -8,14 +8,14 @@ const codeParam = urlParams.get("code");
 const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
 	let players = [victim, attacker]
 
-	players.setInvisible()
-	players.createHUDText("Header")
+	let strings = ["foo", "bar", "baz"]
+	let buffer = ""
 
-	let numbers = [1, 2, 3, 4, 5]
-
-	for i in 0..5 {
-		let num = numbers[i]
+	for i in 0 .. strings.count() {
+		buffer += strings[i]
 	}
+
+	players.createHUDText(buffer);
 }`;
 
 import { Editor, useMonaco } from "@monaco-editor/react";
