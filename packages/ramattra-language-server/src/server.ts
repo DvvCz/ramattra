@@ -1,4 +1,4 @@
-import { FUNCTIONS, analyze, type Error, CONSTANTS, EVENTS } from "@ramattra/ramattra-core";
+import { FUNCTIONS, analyze, type Error, CONSTANTS, EVENTS, reprType } from "@ramattra/ramattra-core";
 import { dedent } from "@ramattra/ramattra-util";
 import { CompletionItemKind, Connection, Diagnostic, DiagnosticSeverity, TextDocuments, TextDocumentSyncKind } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -89,7 +89,7 @@ export const onInit = (connection: Connection) => {
 				contents: {
 					kind: "markdown",
 					value: dedent`
-						${word}(${fn?.args.map(x => x.default ? `${x.type} = ${x.default}` : x.type).join(", ")})
+						${word}(${fn?.args.map(x => x.default ? `${reprType(x.type)} = ${x.default}` : reprType(x.type)).join(", ")})
 
 						**Overwatch Function**: \`${fn.ow}\`
 						[workshop.codes](${WORKSHOP_CODES_HREF}${fn.ow.replaceAll(" ", "+").toLowerCase()})
@@ -102,7 +102,7 @@ export const onInit = (connection: Connection) => {
 				contents: {
 					kind: "markdown",
 					value: dedent`
-						${word}: ${constant.type}
+						${word}: ${reprType(constant.type)}
 
 						**Overwatch Value**: \`${constant.ow}\`
 					`
@@ -114,14 +114,14 @@ export const onInit = (connection: Connection) => {
 				contents: {
 					kind: "markdown",
 					value: dedent`
-						event ${word}(${event.args.map(a => a.type).join(", ")})
+						event ${word}(${event.args.map(a => reprType(a.type)).join(", ")})
 
 						**Overwatch Event**: \`${event.ow}\`
 						[workshop.codes](${WORKSHOP_CODES_HREF}${event.ow.replaceAll(" ", "+").toLowerCase()})
 
 						### Arguments
 						%S
-					`.replace("%S", event.args.map(a => `* **${a.ow}**: \`${a.type}\``).join("\n"))
+					`.replace("%S", event.args.map(a => `* **${a.ow}**: \`${reprType(a.type)}\``).join("\n"))
 				},
 			}
 		}
@@ -161,7 +161,7 @@ export const onInit = (connection: Connection) => {
 		const data = item.data as [CompletionItemKind, string];
 		if (data[0] == CompletionItemKind.Function) {
 			const fn = FUNCTIONS[data[1]]!;
-			item.detail = `${data[1]}(${fn?.args.map(x => x.default ? `${x.type} = ${x.default}` : x.type).join(", ")})`
+			item.detail = `${data[1]}(${fn?.args.map(x => x.default ? `${reprType(x.type)} = ${x.default}` : reprType(x.type)).join(", ")})`
 			item.documentation = {
 				kind: "markdown",
 				value: dedent`
@@ -171,7 +171,7 @@ export const onInit = (connection: Connection) => {
 			}
 		} else if (data[0] == CompletionItemKind.Constant) {
 			const constant = CONSTANTS[data[1]]!;
-			item.detail = `${data[1]}: ${constant.type}`;
+			item.detail = `${data[1]}: ${reprType(constant.type)}`;
 			item.documentation = {
 				kind: "markdown",
 				value: dedent`
@@ -180,7 +180,7 @@ export const onInit = (connection: Connection) => {
 			}
 		} else if (data[0] == CompletionItemKind.Event) {
 			const event = EVENTS[data[1]]!;
-			item.detail = `event ${data[1]}(${event.args.map(a => a.type).join(", ")})`
+			item.detail = `event ${data[1]}(${event.args.map(a => reprType(a.type)).join(", ")})`
 			item.documentation = {
 				kind: "markdown",
 				value: dedent`
@@ -189,7 +189,7 @@ export const onInit = (connection: Connection) => {
 
 					### Arguments
 					%S
-				`.replace("%S", event.args.map(a => `* **${a.ow}**: \`${a.type}\``).join("\n"))
+				`.replace("%S", event.args.map(a => `* **${a.ow}**: \`${reprType(a.type)}\``).join("\n"))
 			}
 		}
 
