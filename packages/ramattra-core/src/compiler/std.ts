@@ -1,4 +1,4 @@
-import { type Type, native, array, number, string, boolean, union, any } from "./typing";
+import { type Type, native, array, number, string, boolean, union, any, variadic } from "./typing";
 
 export const EVENTS: Record<string, { ow: string, args: { type: Type, ow: string }[] }> = {
 	"client": {
@@ -178,7 +178,7 @@ export const FUNCTIONS: Record<string, { ow: string, args: { type: Type, default
 		args: [{ type: native("textid") }],
 	},
 
-	"format": { ow: "Custom String", args: [{ type: string }, { type: native("...") }], ret: string },
+	"format": { ow: "Custom String", args: [{ type: string }, { type: variadic(any) }], ret: string },
 
 	// "wait": { ow: "Wait", args: [ "number" } },
 	"disableMessages": { ow: "Disable Messages", args: [{ type: native("player") }] },
