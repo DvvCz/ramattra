@@ -59,7 +59,7 @@ Stmt =
 BaseExpr =
 	"(" _ @Expr _ ")"
 	/ op:("!" / "typeof") _ expr:Expr { return new Node(location(), [op, expr]) }
-	/ '"' inner:[^"]+ '"' { return new Node(location(), ["string", inner.join("")]) }
+	/ '"' inner:[^"]* '"' { return new Node(location(), ["string", inner.join("")]) }
 	/ ( "true" / "false" ) { return new Node(location(), ["boolean", text() == "true"]) }
 	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return new Node(location(), ["array", type, items]) }
 	/ [0-9]+ "." [0-9]+ { return new Node(location(), ["number", parseFloat(text())]) }

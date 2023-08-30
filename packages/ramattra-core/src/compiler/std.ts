@@ -1,4 +1,4 @@
-import { type Type, native, array, number, string, boolean, union } from "./typing";
+import { type Type, native, array, number, string, boolean, union, any } from "./typing";
 
 export const EVENTS: Record<string, { ow: string, args: { type: Type, ow: string }[] }> = {
 	"client": {
@@ -185,6 +185,7 @@ export const FUNCTIONS: Record<string, { ow: string, args: { type: Type, default
 
 	"allPlayers": { ow: "All Players", args: [{ type: native("team") }], ret: array(native("player")) },
 
+	// Player | Player[]
 	"setAbility1Enabled": { ow: "Set Ability 1 Enabled", args: [{ type: union(array(native("player")), native("player")) }, { type: boolean }] },
 	"setAbility2Enabled": { ow: "Set Ability 2 Enabled", args: [{ type: union(array(native("player")), native("player")) }, { type: boolean }] },
 	"setAbilityCharge": { ow: "Set Ability Charge", args: [{ type: native("player") }, { type: native("button") }, { type: number }] },
@@ -222,17 +223,21 @@ export const FUNCTIONS: Record<string, { ow: string, args: { type: Type, default
 	"setUltimateCharge": { ow: "Set Ultimate Charge", args: [{ type: union(array(native("player")), native("player")) }, { type: number }] },
 	"setWeapon": { ow: "Set Weapon", args: [{ type: union(array(native("player")), native("player")) }, { type: number }] },
 
+	// Player
 	"getHero": { ow: "Hero Of", args: [{ type: native("player") }], ret: native("hero") },
 	"getHealth": { ow: "Health", args: [{ type: native("player") }], ret: number },
 
+	// Number
 	"round": { ow: "Round To Integer", args: [{ type: number }, { type: native("rounding"), default: "To Nearest" }], ret: number },
 	"ceil": { ow: "Round To Integer", args: [{ type: number }, { type: native("rounding"), default: "Up" }], ret: number },
 	"floor": { ow: "Round To Integer", args: [{ type: number }, { type: native("rounding"), default: "Down" }], ret: number },
+	"pow": { ow: "Raise To Power", args: [{ type: number }, { type: number }], ret: number },
 
+	// Vector
 	"Vector": { ow: "Vector", args: [{ type: number }, { type: number }, { type: number }], ret: native("vector") },
 	"cross": { ow: "Cross Product", args: [{ type: native("vector") }, { type: native("vector") }], ret: native("vector") },
 	"dot": { ow: "Dot Product", args: [{ type: native("vector") }, { type: native("vector") }], ret: number },
 	"towards": { ow: "Vector Towards", args: [{ type: native("vector") }, { type: native("vector") }], ret: native("vector") },
 
-	"pow": { ow: "Raise To Power", args: [{ type: number }, { type: number }], ret: number }
+	"count": { ow: "Count Of", args: [{ type: array(any) }], ret: native("number") }
 };
