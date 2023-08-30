@@ -3,6 +3,7 @@ export default {
 
 	keywords: ["event", "function", "typeof", "if", "else", "let", "while", "for", "in"],
 	typeKeywords: ["number", "string", "boolean", "never", "void", "any"],
+	valueKeywords: ["true", "false", "null"],
 	operators: ["=", ">", "<", "!", ":", "==", "<=", ">=", "!=", "&&", "||", "+", "-", "*", "/", "%", "+=", "-=", "*=", "/="],
 
 	symbols: /[=><!:&|+\-*\/\^%]+/,
@@ -12,9 +13,10 @@ export default {
 	tokenizer: {
 		root: [
 			// identifiers and keywords
-			[/[a-z_$][\w]*/, {
+			[/[a-zA-Z_]\w*/, {
 				cases: {
 					"@typeKeywords": "keyword",
+					"@valueKeywords": "constant",
 					"@keywords": "keyword",
 					"@default": "identifier"
 				}
