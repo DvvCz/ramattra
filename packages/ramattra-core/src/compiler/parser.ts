@@ -30,7 +30,7 @@ export const Parser = peg`
 }}
 
 Top =
-	_ @(Function / Event / TypeDef)|.., _| _
+	_ @(Function / Event / TypeDef)|.., _ ";"? _| _
 
 Function =
 	"function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["function", name, params, block]) }
@@ -86,15 +86,19 @@ Expr "expression" =
 	/ name:ident "(" _ args:Expr|.., _ "," _| _ ")" { return new Node(location(), ["call", name, args]) }
 	/ BaseExpr
 
+Type "type" =
+	types:ArrayType|2.., _ "|" _| { return { kind: "union", types } }
+	/ ArrayType
+
+ArrayType "type" =
+	type:BaseType "[]" { return { kind: "array", type } }
+	/ BaseType
+
 BaseType =
-	"..." type:Type { return { kind: "variadic", type } }
+	"(" _ @Type _ ")"
+	/ "..." type:Type { return { kind: "variadic", type } }
 	/ "fn(" _ params:Type|.., _ "," _| _ ")" ret:(_ "->" _ @Type)? { return { kind: "function", params, ret: ret ?? { kind: "native", name: "void" } } }
 	/ name:ident { return { kind: "native", name } }
-
-Type "type" =
-	type:BaseType "[]" { return { kind: "array", type } }
-	/ types:BaseType|1.., _ "|" _| { return { kind: "union", types } }
-	/ BaseType
 
 ident "identifier" =
 	[a-zA-Z_][a-zA-Z0-9_]* { return text() }
