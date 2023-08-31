@@ -131,25 +131,42 @@ export function analyze(src: string): IREvent[] {
 			const types = args.map(a => a.type);
 			const solver = new TypeSolver();
 
-			const fn = FUNCTIONS[name] || userfunctions.get(name);
-			if (!fn)
-				expr.throw(`No such function ${name}(${types.map(reprType).join(", ")})`);
+			const fn = FUNCTIONS[name];
+			if (!fn) {
+				const ufn = userfunctions.get(name);
 
-			for (const expected of fn.args) {
-				if (types.length == 0) {
-					if (expected.default) {
-						args.push({ type: expected.type, data: ["constant", expected.default] });
-						continue;
-					} else if (expected.type.kind == "variadic") {
-						break;
-					} else {
+				if (!ufn)
+					expr.throw(`No such function ${name}(${types.map(reprType).join(", ")})`);
+
+				if (solver.satisfies(ufn.ret, nothing))
+					expr.throw(`Cannot use function ${name} as expression, returns void.`);
+
+				for (const [i, expected] of ufn.args.entries()) {
+					if (types.length == 0)
 						expr.throw(`Not enough arguments passed to ${name}, expected ${reprType(expected.type)}`);
-					}
+
+					const given = types.shift()!;
+					if (!solver.satisfies(expected.type, given))
+						expr.throw(`Expected ${reprType(expected.type)}, got ${reprType(given)}`)
+
+
+					if (interner.size >= 1000)
+						expr.throw(`Cannot use more than 1000 variables, for now.`);
+
+					const [str, id] = [`${name}${scopes.length}`, interner.size];
+					if (!interner.has(str))
+						interner.set(str, id);
+
+					scope.set(expected.name, { type: given, data: ["ident", id] });
+
+					stmts.push(["let", id, given, args[i]]);
 				}
 
-				const given = types.shift()!;
-				if (!solver.satisfies(expected.type, given))
-					expr.throw(`Expected ${reprType(expected.type)}, got ${reprType(given)}`)
+				const block = analyzeStmt(ufn.block, stmts);
+				stmts.push(...block[1] as any);
+
+				// Functions cannot return any values so this current patch of just returning the number 5 will suffice.
+				return { type: number, data: ["number", 5] }
 			}
 
 			if ((fn as any).ow) {
@@ -323,6 +340,10 @@ export function analyze(src: string): IREvent[] {
 		const kind = obj.data[0];
 		if (kind == "function") {
 			const [, name, params, ret, block] = obj.data;
+
+			if (ret.kind != "native" || ret.name != "void")
+				obj.throw(`Functions can only return void for now.`);
+
 			userfunctions.set(name, { args: params, ret, block });
 		} else if (kind == "event") {
 			const [, name, args, block] = obj.data;

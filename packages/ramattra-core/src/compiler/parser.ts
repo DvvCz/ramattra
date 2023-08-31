@@ -48,7 +48,7 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return new Node(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr _ ".." _ end:Expr _ block:Block {
 		return new Node(location(), ["block", [
-			new Node(location(), ["let", marker, { type: "native", name: "number" }, start]),
+			new Node(location(), ["let", marker, { kind: "native", name: "number" }, start]),
 			new Node(location(), ["while", new Node(location(), ["<", new Node(location(), ["ident", marker]), end]),
 				new Node(location(), ["block", [
 					block,
