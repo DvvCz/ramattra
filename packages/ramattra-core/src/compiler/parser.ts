@@ -33,7 +33,7 @@ Top =
 	_ @(Function / Event / TypeDef)|.., _ ";"? _| _
 
 Function =
-	"function" _ name:ident "(" _ params:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["function", name, params, block]) }
+	"function" _ name:ident "(" _ params:(pname:ident ":" _ ptype:Type { return { name: pname, type: ptype } })|.., _ "," _| _ ")" _ "->" _ ret:Type _ block:Block { return new Node(location(), ["function", name, params, ret, block]) }
 
 Event =
 	"event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block { return new Node(location(), ["event", name, args, block]) }
@@ -48,7 +48,7 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return new Node(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr _ ".." _ end:Expr _ block:Block {
 		return new Node(location(), ["block", [
-			new Node(location(), ["let", marker, "number", start]),
+			new Node(location(), ["let", marker, { type: "native", name: "number" }, start]),
 			new Node(location(), ["while", new Node(location(), ["<", new Node(location(), ["ident", marker]), end]),
 				new Node(location(), ["block", [
 					block,
@@ -58,7 +58,7 @@ Stmt =
 		]])
 	}
 	/ "while" _ cond:Expr _ block:Block { return new Node(location(), ["while", cond, block]) }
-	/ "let" _ name:ident _ type:(":" _ @ident)? _ value:("=" _ @Expr)? { return new Node(location(), ["let", name, type, value]) }
+	/ "let" _ name:ident _ type:(":" _ @Type)? _ value:("=" _ @Expr)? { return new Node(location(), ["let", name, type, value]) }
 	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return new Node(location(), ["assign", name, new Node(location(), [op, new Node(location(), ["ident", name]), value])]) }
 	/ name:ident _ "=" _ value:Expr { return new Node(location(), ["assign", name, value]) }
 	/ obj:Expr "." index:ident _ "=" _ value:Expr { return new Node(location(), ["iassign", obj, index]) }
@@ -70,7 +70,7 @@ BaseExpr =
 	/ op:("!" / "typeof") _ expr:Expr { return new Node(location(), [op, expr]) }
 	/ '"' inner:[^"]* '"' { return new Node(location(), ["string", inner.join("")]) }
 	/ ( "true" / "false" ) { return new Node(location(), ["boolean", text() == "true"]) }
-	/ type:("<" @ident ">")? "[" items:Expr|.., _ "," _| "]" { return new Node(location(), ["array", type, items]) }
+	/ type:("<" @Type ">")? "[" items:Expr|.., _ "," _| "]" { return new Node(location(), ["array", type, items]) }
 	/ [0-9]+ "." [0-9]+ { return new Node(location(), ["number", parseFloat(text())]) }
 	/ "0b" [0-1]+ { return new Node(location(), ["number", parseInt(text().substring(2), 2)]) }
 	/ "0x" [0-9a-fA-F]+ { return new Node(location(), ["number", parseInt(text().substring(2), 16)]) }
@@ -91,7 +91,7 @@ Type "type" =
 	/ ArrayType
 
 ArrayType "type" =
-	type:BaseType "[]" { return { kind: "array", type } }
+	item:BaseType "[]" { return { kind: "array", item } }
 	/ BaseType
 
 BaseType =
@@ -145,7 +145,7 @@ type StmtData =
 	["block", Stmt[]]
 	| ["if", Expr, Stmt]
 	| ["while", Expr, Stmt]
-	| ["let", string, string, Expr | null]
+	| ["let", string, Type, Expr | null]
 	| ["assign", string, Expr]
 	| ["iassign", Expr, string, Expr]
 	| ["call", string, Expr[]];
@@ -177,10 +177,10 @@ export type ExprData =
 	["ident", string] |
 	["string", string] |
 	["boolean", boolean] |
-	["array", string | null, Expr[]] |
+	["array", Type | null, Expr[]] |
 	["number", number]
 
-export type Function = Node<["function", string, string[], Stmt]>;
+export type Function = Node<["function", string, { name: string, type: Type }[], Type, Stmt]>;
 export type TypeDef = Node<["type", string, Type]>;
 export type Event = Node<["event", string, string[], Stmt]>;
 

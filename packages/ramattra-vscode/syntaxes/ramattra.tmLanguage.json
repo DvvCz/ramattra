@@ -139,7 +139,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control",
-					"match": "\\b(event|function|typeof|if|else|let|while|for|in)\\b"
+					"match": "\\b(event|function|typeof|type|return|if|else|let|while|for|in)\\b"
 				}
 			]
 		},
