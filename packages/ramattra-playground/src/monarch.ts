@@ -1,7 +1,7 @@
 export default {
 	defaultToken: "invalid",
 
-	keywords: ["event", "function", "type", "typeof", "if", "else", "let", "while", "for", "in"],
+	keywords: ["event", "function", "type", "typeof", "return", "if", "else", "let", "while", "for", "in"],
 	typeKeywords: ["number", "string", "boolean", "never", "void", "any"],
 	valueKeywords: ["true", "false", "null"],
 	operators: ["=", ">", "<", "!", ":", "==", "<=", ">=", "!=", "&&", "||", "+", "-", "*", "/", "%", "+=", "-=", "*=", "/="],
