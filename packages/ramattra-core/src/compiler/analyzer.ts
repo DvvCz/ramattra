@@ -48,7 +48,7 @@ type IRExprData =
 export type IREvent =
 	["event", string, string, IRStmt];
 
-type Scope = { kind?: null | "loop" | "function", variables: Map<string, IRExpr> };
+type Scope = { kind?: null | "loop" | "function", variables: Map<string, { const: boolean, expr: IRExpr }> };
 
 function error(e: Node<any>, message: string): never {
 	throw {
@@ -77,7 +77,7 @@ export function analyze(src: string): IREvent[] {
 	const lookupKind = (kind: Scope["kind"]): boolean =>
 		scopes.find(i => i.kind == kind) !== undefined;
 
-	const lookupVariable = (name: string): IRExpr | undefined => {
+	const lookupVariable = (name: string): { const: boolean, expr: IRExpr } | undefined => {
 
 		for (let i = scopes.length - 1; i >= 0; i--) {
 			const scope = scopes[i];
@@ -89,7 +89,7 @@ export function analyze(src: string): IREvent[] {
 
 		const constant = CONSTANTS[name];
 		if (constant)
-			return { type: constant.type, data: ["constant", constant.ow] }
+			return { const: true, expr: { type: constant.type, data: ["constant", constant.ow] } }
 	}
 
 	const analyzeExpr = (expr: Expr, stmts: IRStmt[]): IRExpr => {
@@ -175,11 +175,11 @@ export function analyze(src: string): IREvent[] {
 					error(expr, `No such function ${name}`);
 
 
-				stmts.push(analyzeStmt(sugar(expr, ["let", "__returnval__", ufn.ret, null]), stmts));
+				stmts.push(analyzeStmt(sugar(expr, ["let", "__returnval__", ufn.ret, null, false]), stmts));
 
 				const inner = sugar(expr, ["block", [
 					...ufn.args.map((arg, i) =>
-						sugar(expr, ["let", arg.name, arg.type, args[i]])
+						sugar(expr, ["let", arg.name, arg.type, args[i], true])
 					),
 					...ufn.block.data[1] as Stmt[]
 				], "function"]);
@@ -215,7 +215,7 @@ export function analyze(src: string): IREvent[] {
 			const v = lookupVariable(expr.data[1]);
 			if (!v)
 				error(expr, `Variable ${expr.data[1]} is not defined.`);
-			return v;
+			return v.expr;
 		}
 
 		return kind;
@@ -242,10 +242,9 @@ export function analyze(src: string): IREvent[] {
 		} else if (kind == "while") {
 			const [, exp, block] = statement.data;
 			block.data[2] = "loop";
-			console.log("whl", block.data[2]);
 			return ["while", analyzeExpr(exp, stmts), analyzeStmt(block, stmts)];
 		} else if (kind == "let") {
-			const [name, expr] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3], stmts)];
+			const [name, expr, immutable] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3], stmts), statement.data[4]];
 			const type = statement.data[2] || expr?.type;
 
 			if (!type)
@@ -264,7 +263,7 @@ export function analyze(src: string): IREvent[] {
 			if (!interner.has(str))
 				interner.set(str, id);
 
-			scope.variables.set(name, { type: type, data: ["ident", id] });
+			scope.variables.set(name, { const: immutable, expr: { type: type, data: ["ident", id] } });
 
 			if (expr) {
 				return ["let", id, type, expr];
@@ -278,13 +277,13 @@ export function analyze(src: string): IREvent[] {
 			if (!v)
 				error(statement, `Variable ${name} has not been declared. Maybe you meant let ${name}?`);
 
-			if (!solver.satisfies(v.type, expr.type))
-				error(statement, `Cannot assign value of ${reprType(expr.type)} to variable of type ${reprType(v.type)}`);
+			if (!solver.satisfies(v.expr.type, expr.type))
+				error(statement, `Cannot assign value of ${reprType(expr.type)} to variable of type ${reprType(v.expr.type)}`);
 
-			if (v.data[0] == "constant")
+			if (v.const)
 				error(statement, `Cannot assign to constant ${name}`);
 
-			return ["assign", v.data[1] as number, expr];
+			return ["assign", v.expr.data[1] as number, expr];
 		} else if (kind == "call") {
 			const [name, args] = [statement.data[1], statement.data[2]];
 
@@ -316,9 +315,9 @@ export function analyze(src: string): IREvent[] {
 					error(statement, `No such function ${name}`);
 
 				const desugared: Stmt[] = [
-					sugar(statement, ["let", "__returnval__", ufn.ret, null]),
+					sugar(statement, ["let", "__returnval__", ufn.ret, null, false]),
 					...ufn.args.map((arg, i) =>
-						sugar(statement, ["let", arg.name, arg.type, args[i]])
+						sugar(statement, ["let", arg.name, arg.type, args[i], true])
 					),
 					...ufn.block.data[1] as Stmt[]
 				];
@@ -377,7 +376,7 @@ export function analyze(src: string): IREvent[] {
 			scope = { variables: new Map() };
 			for (const [i, arg] of args.entries()) {
 				const registered = event.args[i];
-				scope.variables.set(arg, { type: registered.type, data: ["constant", registered.ow] });
+				scope.variables.set(arg, { const: true, expr: { type: registered.type, data: ["constant", registered.ow] } });
 			}
 
 			scopes.push(scope);

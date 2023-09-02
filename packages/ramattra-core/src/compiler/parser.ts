@@ -38,7 +38,7 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return wrap(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr _ ".." _ end:Expr _ block:Block {
 		return wrap(location(), ["block", [
-			wrap(location(), ["let", marker, { kind: "native", name: "number" }, start]),
+			wrap(location(), ["let", marker, { kind: "native", name: "number" }, start, false]),
 			wrap(location(), ["while", wrap(location(), ["<", wrap(location(), ["ident", marker]), end]),
 				wrap(location(), ["block", [
 					block,
@@ -48,7 +48,8 @@ Stmt =
 		]])
 	}
 	/ "while" _ cond:Expr _ block:Block { return wrap(location(), ["while", cond, block]) }
-	/ "let" _ name:ident _ type:(":" _ @Type)? _ value:("=" _ @Expr)? { return wrap(location(), ["let", name, type, value]) }
+	/ "let" _ name:ident _ type:(":" _ @Type)? _ value:("=" _ @Expr)? { return wrap(location(), ["let", name, type, value, false]) }
+	/ "const" _ name:ident _ type:(":" _ @Type)? _ value:("=" _ @Expr)? { return wrap(location(), ["let", name, type, value, true]) }
 	/ "return" _ exp:Expr? { return wrap(location(), ["return", exp]) }
 	/ action:("continue" / "break") { return wrap(location(), [action]) }
 	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return wrap(location(), ["assign", name, wrap(location(), [op, wrap(location(), ["ident", name]), value])]) }
@@ -135,7 +136,7 @@ export type StmtData =
 	["block", Stmt[], null | "loop" | "function"]
 	| ["if", Expr, Stmt]
 	| ["while", Expr, Stmt]
-	| ["let", string, Type, Expr | null]
+	| ["let", string, Type, Expr | null, boolean]
 	| ["assign", string, Expr]
 	| ["iassign", Expr, string, Expr]
 	| ["call", string, Expr[]]
