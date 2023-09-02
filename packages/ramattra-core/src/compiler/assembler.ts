@@ -102,6 +102,10 @@ export function assemble(src: string): string {
 			`;
 		} else if (kind == "noop") {
 			return "";
+		} else if (kind == "break") {
+			return "Break;"
+		} else if (kind == "continue") {
+			return "Continue;"
 		}
 
 		return kind;

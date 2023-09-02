@@ -50,6 +50,7 @@ Stmt =
 	/ "while" _ cond:Expr _ block:Block { return wrap(location(), ["while", cond, block]) }
 	/ "let" _ name:ident _ type:(":" _ @Type)? _ value:("=" _ @Expr)? { return wrap(location(), ["let", name, type, value]) }
 	/ "return" _ exp:Expr? { return wrap(location(), ["return", exp]) }
+	/ action:("continue" / "break") { return wrap(location(), [action]) }
 	/ name:ident _ op:("+" / "-" / "*" / "/") "=" _ value:Expr { return wrap(location(), ["assign", name, wrap(location(), [op, wrap(location(), ["ident", name]), value])]) }
 	/ name:ident _ "=" _ value:Expr { return wrap(location(), ["assign", name, value]) }
 	/ obj:Expr "." index:ident _ "=" _ value:Expr { return wrap(location(), ["iassign", obj, index]) }
@@ -131,14 +132,16 @@ export type Node<T> = {
 export type Stmt = Node<StmtData>
 
 export type StmtData =
-	["block", Stmt[]]
+	["block", Stmt[], null | "loop" | "function"]
 	| ["if", Expr, Stmt]
 	| ["while", Expr, Stmt]
 	| ["let", string, Type, Expr | null]
 	| ["assign", string, Expr]
 	| ["iassign", Expr, string, Expr]
 	| ["call", string, Expr[]]
-	| ["return", Expr | null];
+	| ["return", Expr | null]
+	| ["continue"]
+	| ["break"];
 
 export type Expr = Node<ExprData>
 

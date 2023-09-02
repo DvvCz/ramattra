@@ -11,6 +11,8 @@ export type IRStmt =
 	| ["iassign", IRExpr, string, IRExpr]
 	| ["call", string, IRExpr[]]
 	| ["noop"]
+	| ["break"]
+	| ["continue"]
 
 export type IRExpr =
 	{ type: Type, data: IRExprData }
@@ -46,7 +48,7 @@ type IRExprData =
 export type IREvent =
 	["event", string, string, IRStmt];
 
-type Scope = Map<string, IRExpr>;
+type Scope = { kind?: null | "loop" | "function", variables: Map<string, IRExpr> };
 
 function error(e: Node<any>, message: string): never {
 	throw {
@@ -65,18 +67,21 @@ function sugar(e: Node<any>, data: ExprData | StmtData) {
 export function analyze(src: string): IREvent[] {
 	const ast = parse(src);
 
-	let scope: Scope = new Map();
+	let scope: Scope = { variables: new Map() };
 	const interner = new Map<string, number>();
 	const scopes = [scope];
 
 	const userfunctions: Map<string, { args: { type: Type, name: string, default?: string }[], ret: Type, block: Stmt }> = new Map();
 	const usertypes: Map<string, Type> = new Map();
 
+	const lookupKind = (kind: Scope["kind"]): boolean =>
+		scopes.find(i => i.kind == kind) !== undefined;
+
 	const lookupVariable = (name: string): IRExpr | undefined => {
 
 		for (let i = scopes.length - 1; i >= 0; i--) {
 			const scope = scopes[i];
-			const value = scope.get(name);
+			const value = scope.variables.get(name);
 
 			if (value)
 				return value;
@@ -169,15 +174,18 @@ export function analyze(src: string): IREvent[] {
 				if (!ufn)
 					error(expr, `No such function ${name}`);
 
-				const desugared: Stmt[] = [
-					sugar(expr, ["let", "__returnval__", ufn.ret, null]),
+
+				stmts.push(analyzeStmt(sugar(expr, ["let", "__returnval__", ufn.ret, null]), stmts));
+
+				const inner = sugar(expr, ["block", [
 					...ufn.args.map((arg, i) =>
 						sugar(expr, ["let", arg.name, arg.type, args[i]])
 					),
 					...ufn.block.data[1] as Stmt[]
-				];
+				], "function"]);
 
-				desugared.forEach(s => stmts.push(analyzeStmt(s, stmts)));
+				stmts.push(analyzeStmt(inner, stmts));
+
 				return analyzeExpr(sugar(expr, ["ident", "__returnval__"]), stmts);
 			}
 		} else if (kind == "!") {
@@ -218,7 +226,7 @@ export function analyze(src: string): IREvent[] {
 		const solver = new TypeSolver();
 
 		if (kind == "block") {
-			scope = new Map();
+			scope = { kind: statement.data[2], variables: new Map() };
 
 			scopes.push(scope);
 			const out: IRStmt[] = [];
@@ -232,7 +240,10 @@ export function analyze(src: string): IREvent[] {
 		} else if (kind == "if") {
 			return ["if", analyzeExpr(statement.data[1], stmts), analyzeStmt(statement.data[2], stmts)];
 		} else if (kind == "while") {
-			return ["while", analyzeExpr(statement.data[1], stmts), analyzeStmt(statement.data[2], stmts)];
+			const [, exp, block] = statement.data;
+			block.data[2] = "loop";
+			console.log("whl", block.data[2]);
+			return ["while", analyzeExpr(exp, stmts), analyzeStmt(block, stmts)];
 		} else if (kind == "let") {
 			const [name, expr] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3], stmts)];
 			const type = statement.data[2] || expr?.type;
@@ -240,7 +251,7 @@ export function analyze(src: string): IREvent[] {
 			if (!type)
 				error(statement, `Cannot declare variable without an expression or type annotation`);
 
-			if (scope.has(name))
+			if (scope.variables.has(name))
 				error(statement, `Cannot redeclare existing variable ${name}`);
 
 			if (expr && !solver.satisfies(type, expr.type))
@@ -253,7 +264,7 @@ export function analyze(src: string): IREvent[] {
 			if (!interner.has(str))
 				interner.set(str, id);
 
-			scope.set(name, { type: type, data: ["ident", id] });
+			scope.variables.set(name, { type: type, data: ["ident", id] });
 
 			if (expr) {
 				return ["let", id, type, expr];
@@ -312,7 +323,7 @@ export function analyze(src: string): IREvent[] {
 					...ufn.block.data[1] as Stmt[]
 				];
 
-				return analyzeStmt(sugar(statement, ["block", desugared]), stmts);
+				return analyzeStmt(sugar(statement, ["block", desugared, "function"]), stmts);
 			}
 		} else if (kind == "iassign") {
 			const [obj, index, value] = [analyzeExpr(statement.data[1], stmts), statement.data[2], analyzeExpr(statement.data[3], stmts)];
@@ -322,11 +333,24 @@ export function analyze(src: string): IREvent[] {
 
 			return ["iassign", obj, index, value];
 		} else if (kind == "return") {
+			if (!lookupKind("function"))
+				error(statement, `Cannot return outside of a function`);
+
 			const exp = statement.data[1];
 			if (!exp)
 				error(statement, `Currently can only return with an expression`);
 
 			return analyzeStmt({ location: statement.location, data: ["assign", "__returnval__", exp] }, stmts);
+		} else if (kind == "break") {
+			if (!lookupKind("loop"))
+				error(statement, `Cannot break outside of a loop`);
+
+			return ["break"];
+		} else if (kind == "continue") {
+			if (!lookupKind("loop"))
+				error(statement, `Cannot continue outside of a loop`);
+
+			error(statement, "Unimplemented: continue");
 		}
 
 		return kind; // return "never", mark as unreachable.
@@ -337,6 +361,7 @@ export function analyze(src: string): IREvent[] {
 		const kind = obj.data[0];
 		if (kind == "function") {
 			const [, name, params, ret, block] = obj.data;
+			block.data[2] = "function";
 			userfunctions.set(name, { args: params, ret, block });
 		} else if (kind == "event") {
 			const [, name, args, block] = obj.data;
@@ -349,10 +374,10 @@ export function analyze(src: string): IREvent[] {
 			if (event.args.length != args.length)
 				error(obj, `Event ${name} has ${event.args.length} arguments.`);
 
-			scope = new Map();
+			scope = { variables: new Map() };
 			for (const [i, arg] of args.entries()) {
 				const registered = event.args[i];
-				scope.set(arg, { type: registered.type, data: ["constant", registered.ow] });
+				scope.variables.set(arg, { type: registered.type, data: ["constant", registered.ow] });
 			}
 
 			scopes.push(scope);
