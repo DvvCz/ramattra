@@ -9,20 +9,7 @@ A language similar to Typescript that compiles to [Overwatch Workshop Scripts](h
 
 ## Example
 
-```ts
-event playerDied(victim, attacker, damage, crit, ability, dir) {
-	let players = [victim, attacker];
-
-	let strings = ["foo", "bar", "baz"];
-	let buffer = "";
-
-	for i in 0 .. strings.count() {
-		buffer += strings[i];
-	}
-
-	players.createHUDText(buffer);
-}
-```
+![Example](assets/example.png)
 
 ## Wiki
 
