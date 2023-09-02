@@ -5,17 +5,18 @@ import { Error, assemble } from "@ramattra/ramattra-core";
 
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
-const defaultCode = codeParam ? decodeURIComponent(codeParam) : `event playerDied(victim, attacker, damage, crit, ability, dir) {
-	let players = [victim, attacker]
-
-	let strings = ["foo", "bar", "baz"]
-	let buffer = ""
+const defaultCode = codeParam ? decodeURIComponent(codeParam) : `function join(strings: string[]) -> string {
+	let buf = "";
 
 	for i in 0 .. strings.count() {
-		buffer += strings[i]
+		buf += strings[i]
 	}
 
-	players.createHUDText(buffer);
+	return buf;
+}
+
+event playerDied(victim, attacker, damage, crit, ability, dir) {
+	victim.createHUDText( ["Hello", "Ramattra", "!"].join() );
 }`;
 
 import { Editor, useMonaco } from "@monaco-editor/react";
