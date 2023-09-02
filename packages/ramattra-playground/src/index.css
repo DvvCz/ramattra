@@ -23,6 +23,7 @@ body {
 
 	background-color: var(--color-ram);
 	height: 7%;
+	font-size: x-large;
 
 	.logo {
 		color: white;
@@ -119,6 +120,7 @@ body {
 
 			& button {
 				background-color: transparent;
+				font-size: large;
 
 				border: none;
 				color: white;
@@ -165,7 +167,7 @@ body {
 
 			background-color: var(--color-output);
 			color: white;
-			font-size: smaller;
+			font-size: small;
 			overflow-x: auto;
 			overflow-y: clip;
 
