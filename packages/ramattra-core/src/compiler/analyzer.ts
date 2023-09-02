@@ -162,7 +162,7 @@ export function analyze(src: string): IREvent[] {
 						error(expr, `Expected ${reprType(expected.type)}, got ${reprType(given)}`)
 				}
 
-				return { type: fn.ret ?? nothing, data: ["call", name, iargs] };
+				return { type: fn.ret ?? nothing, data: ["call", fn.ow, iargs] };
 			} else {
 				const ufn = userfunctions.get(name);
 
@@ -297,7 +297,7 @@ export function analyze(src: string): IREvent[] {
 						error(statement, `Expected ${reprType(expected.type)}, got ${reprType(given)}`)
 				}
 
-				return ["call", name, iargs];
+				return ["call", fn.ow, iargs];
 			} else {
 				const ufn = userfunctions.get(name);
 
