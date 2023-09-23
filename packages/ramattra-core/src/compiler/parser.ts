@@ -1,5 +1,5 @@
 import * as peggy from "peggy";
-import { Type } from "./typing";
+import { Type } from "..";
 
 /* c8 ignore next 1: Testing variable check. */
 const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(template), process.env.NODE_ENV == "test" ? { allowedStartRules: ["*"] } : undefined);
@@ -14,7 +14,7 @@ const peg = (template: TemplateStringsArray) => peggy.generate(String.raw(templa
  */
 export const Parser = peg`
 {{
-	function wrap(location, data) {
+	const wrap = (location, data) => {
 		return { location, data }
 	}
 }}
@@ -23,7 +23,8 @@ Top =
 	_ @(Function / Event / TypeDef)|.., _ ";"? _| _
 
 Function =
-	"function" _ name:ident "(" _ params:(pname:ident ":" _ ptype:Type { return { name: pname, type: ptype } })|.., _ "," _| _ ")" _ "->" _ ret:Type _ block:Block { return wrap(location(), ["function", name, params, ret, block]) }
+	"function" _ name:ident "<" _ generics:((gname:ident _ bound:(":" _ @Type)? { return { name: gname, bound } })|.., _ "," _|) _ ">" _ "(" _ params:(pname:ident ":" _ ptype:Type { return { name: pname, type: ptype } })|.., _ "," _| _ ")" _ "->" _ ret:Type _ block:Block { return wrap(location(), ["function", name, generics, params, ret, block]) }
+	/ "function" _ name:ident "(" _ params:(pname:ident ":" _ ptype:Type { return { name: pname, type: ptype } })|.., _ "," _| _ ")" _ "->" _ ret:Type _ block:Block { return wrap(location(), ["function", name, [], params, ret, block]) }
 
 Event =
 	"event" _ name:ident _ "(" _ args:ident|.., _ "," _| _ ")" _ block:Block { return wrap(location(), ["event", name, args, block]) }
@@ -38,7 +39,7 @@ Stmt =
 	"if" _ cond:Expr _ block:Block { return wrap(location(), ["if", cond, block]) }
 	/ "for" _ marker:ident _ "in" _ start:Expr _ ".." _ end:Expr _ block:Block {
 		return wrap(location(), ["block", [
-			wrap(location(), ["let", marker, { kind: "native", name: "number" }, start, false]),
+			wrap(location(), ["let", marker, null, start, false]),
 			wrap(location(), ["while", wrap(location(), ["<", wrap(location(), ["ident", marker]), end]),
 				wrap(location(), ["block", [
 					block,
@@ -80,18 +81,18 @@ Expr "expression" =
 	/ BaseExpr
 
 Type "type" =
-	types:ArrayType|2.., _ "|" _| { return { kind: "union", types } }
+	types:ArrayType|2.., _ "|" _| { return wrap(location(), { kind: "union", types }) }
 	/ ArrayType
 
 ArrayType "type" =
-	item:BaseType "[]" { return { kind: "array", item } }
+	item:BaseType "[]" { return wrap(location(), { kind: "array", item }) }
 	/ BaseType
 
 BaseType =
 	"(" _ @Type _ ")"
-	/ "..." type:Type { return { kind: "variadic", type } }
-	/ "fn(" _ params:Type|.., _ "," _| _ ")" ret:(_ "->" _ @Type)? { return { kind: "function", params, ret: ret ?? { kind: "native", name: "void" } } }
-	/ name:ident { return { kind: "native", name } }
+	/ "..." type:Type { return wrap(location(), { kind: "variadic", type }) }
+	/ "fn(" _ params:Type|.., _ "," _| _ ")" ret:(_ "->" _ @Type)? { return wrap(location(), { kind: "function", params, ret: ret ?? { kind: "native", name: "void" } }) }
+	/ name:ident { return wrap(location(), { kind: "native", name }) }
 
 ident "identifier" =
 	[a-zA-Z_][a-zA-Z0-9_]* { return text() }
@@ -136,13 +137,15 @@ export type StmtData =
 	["block", Stmt[], null | "loop" | "function"]
 	| ["if", Expr, Stmt]
 	| ["while", Expr, Stmt]
-	| ["let", string, Type, Expr | null, boolean]
+	| ["let", string, ParsedType | null, Expr | null, boolean]
 	| ["assign", string, Expr]
 	| ["iassign", Expr, string, Expr]
 	| ["call", string, Expr[]]
 	| ["return", Expr | null]
 	| ["continue"]
-	| ["break"];
+	| ["break"]
+	// Beyond here are sugar intrinsics
+	| ["generic", string, Type];
 
 export type Expr = Node<ExprData>
 
@@ -171,11 +174,21 @@ export type ExprData =
 	["ident", string] |
 	["string", string] |
 	["boolean", boolean] |
-	["array", Type | null, Expr[]] |
+	["array", ParsedType | null, Expr[]] |
 	["number", number]
 
-export type Function = Node<["function", string, { name: string, type: Type }[], Type, Stmt]>;
-export type TypeDef = Node<["type", string, Type]>;
+export type TypeData =
+	{ kind: "native", name: string } |
+	{ kind: "array", item: ParsedType } |
+	{ kind: "function", params: ParsedType[], ret: ParsedType } |
+	{ kind: "variadic", type: ParsedType } |
+	{ kind: "generic", name: string, bound?: ParsedType } |
+	{ kind: "union", types: ParsedType[] }
+
+export type ParsedType = Node<TypeData>;
+
+export type Function = Node<["function", string, { name: string, bound: ParsedType | null }[], { name: string, type: ParsedType }[], ParsedType, Stmt]>;
+export type TypeDef = Node<["type", string, ParsedType]>;
 export type Event = Node<["event", string, string[], Stmt]>;
 
 export function parse(src: string): (Function | Event | TypeDef)[] {

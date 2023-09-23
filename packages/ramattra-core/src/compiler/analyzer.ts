@@ -1,6 +1,6 @@
 import { EVENTS, CONSTANTS, FUNCTIONS } from "./std.js";
-import { parse, Node, Stmt, Expr, ExprData, StmtData } from "./parser.js";
-import { Type, TypeSolver, any, array, boolean, native, nothing, number, reprType, string } from "./typing.js";
+import { parse, Node, Stmt, Expr, ExprData, StmtData, ParsedType } from "./parser.js";
+import { Type, TypeSolver, any, array, boolean, generic, native, nothing, number, reprType, string } from "../typing.js";
 
 export type IRStmt =
 	["block", IRStmt[]]
@@ -10,9 +10,11 @@ export type IRStmt =
 	| ["assign", number, IRExpr]
 	| ["iassign", IRExpr, string, IRExpr]
 	| ["call", string, IRExpr[]]
-	| ["noop"]
 	| ["break"]
 	| ["continue"]
+
+	// Beyond here are compiler operations
+	| ["noop"]
 
 export type IRExpr =
 	{ type: Type, data: IRExprData }
@@ -42,13 +44,17 @@ type IRExprData =
 	["ident", number] |
 	["string", string] |
 	["boolean", boolean] |
-	["array", Type | null, IRExpr[]] |
+	["array", Type, IRExpr[]] |
 	["number", number]
 
 export type IREvent =
 	["event", string, string, IRStmt];
 
-type Scope = { kind?: null | "loop" | "function", variables: Map<string, { const: boolean, expr: IRExpr }> };
+type Scope = {
+	kind?: null | "loop" | "function",
+	variables: Map<string, { const: boolean, expr: IRExpr }>,
+	types: Map<string, Type>
+};
 
 function error(e: Node<any>, message: string): never {
 	throw {
@@ -67,12 +73,18 @@ function sugar(e: Node<any>, data: ExprData | StmtData) {
 export function analyze(src: string): IREvent[] {
 	const ast = parse(src);
 
-	let scope: Scope = { variables: new Map() };
+	const types = new Map([
+		["number", number],
+		["string", string],
+		["player", native("player")],
+		["void", nothing]
+	]);
+
+	let scope = <Scope>{ variables: new Map(), types };
 	const interner = new Map<string, number>();
 	const scopes = [scope];
 
-	const userfunctions: Map<string, { args: { type: Type, name: string, default?: string }[], ret: Type, block: Stmt }> = new Map();
-	const usertypes: Map<string, Type> = new Map();
+	const userfunctions: Map<string, { args: { type: ParsedType, name: string, default?: string }[], generics: { name: string, bound: null | Type }[], ret: ParsedType, block: Stmt }> = new Map();
 
 	const lookupKind = (kind: Scope["kind"]): boolean =>
 		scopes.find(i => i.kind == kind) !== undefined;
@@ -90,11 +102,22 @@ export function analyze(src: string): IREvent[] {
 		const constant = CONSTANTS[name];
 		if (constant)
 			return { const: true, expr: { type: constant.type, data: ["constant", constant.ow] } }
-	}
+	};
+
+	const lookupType = (name: string): Type | undefined => {
+		for (let i = scopes.length - 1; i >= 0; i--) {
+			const scope = scopes[i];
+			const value = scope.types.get(name);
+
+			if (value)
+				return value;
+		}
+	};
+
+	const solver = new TypeSolver();
 
 	const analyzeExpr = (expr: Expr, stmts: IRStmt[]): IRExpr => {
 		const kind = expr.data[0];
-		const solver = new TypeSolver();
 
 		if (kind == "+") {
 			const [lhs, rhs] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)];
@@ -102,7 +125,7 @@ export function analyze(src: string): IREvent[] {
 			if (!solver.satisfies(lhs.type, rhs.type))
 				error(expr, `Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
 
-			if (lhs.type.kind != "native" || (lhs.type.name != "number" && lhs.type.name != "string"))
+			if (!solver.satisfies(lhs.type, number) && !solver.satisfies(lhs.type, string))
 				error(expr, `Can only add numbers and strings`);
 
 			return { type: lhs.type, data: [kind, lhs, rhs] };
@@ -142,8 +165,7 @@ export function analyze(src: string): IREvent[] {
 			if (!solver.satisfies(index.type, number))
 				error(expr, `Can only index an array with a number`);
 
-			// TODO: Make satisfies signature deduce type as array, if possible
-			return { type: (obj.type as any).item, data: [kind, obj, index] };
+			return { type: (solver.resolve(obj.type) as any).item, data: [kind, obj, index] };
 		} else if (kind == "call") {
 			const [name, args] = [expr.data[1], expr.data[2]];
 
@@ -174,10 +196,16 @@ export function analyze(src: string): IREvent[] {
 				if (!ufn)
 					error(expr, `No such function ${name}`);
 
+				console.log(name, "1");
 
 				stmts.push(analyzeStmt(sugar(expr, ["let", "__returnval__", ufn.ret, null, false]), stmts));
 
+				console.log(name);
+
 				const inner = sugar(expr, ["block", [
+					...ufn.generics.map(g =>
+						sugar(expr, ["generic", g.name, generic(g.name, g.bound ?? undefined)])
+					),
 					...ufn.args.map((arg, i) =>
 						sugar(expr, ["let", arg.name, arg.type, args[i], true])
 					),
@@ -186,7 +214,12 @@ export function analyze(src: string): IREvent[] {
 
 				stmts.push(analyzeStmt(inner, stmts));
 
-				return analyzeExpr(sugar(expr, ["ident", "__returnval__"]), stmts);
+				console.log(name, "b4");
+
+				const x = analyzeExpr(sugar(expr, ["ident", "__returnval__"]), stmts);
+				// ufn.generics.forEach(g => solver.deleteGeneric(g.name));
+
+				return x;
 			}
 		} else if (kind == "!") {
 			return { type: boolean, data: [kind, analyzeExpr(expr.data[1], stmts)] };
@@ -197,7 +230,7 @@ export function analyze(src: string): IREvent[] {
 			return { type: native(kind), data: [kind as any, expr.data[1]] };
 		} else if (kind == "array") {
 			const values = expr.data[2].map(a => analyzeExpr(a, stmts));
-			let type = expr.data[1];
+			let type = expr.data[1] && analyzeType(expr.data[1]);
 
 			for (const value of values) {
 				if (!type) {
@@ -210,7 +243,7 @@ export function analyze(src: string): IREvent[] {
 			if (!type)
 				error(expr, `Empty array must be given a tagged type <T>`);
 
-			return { type: array(type), data: [kind, expr.data[1], expr.data[2].map(a => analyzeExpr(a, stmts))] };
+			return { type: array(type), data: [kind, type, expr.data[2].map(a => analyzeExpr(a, stmts))] };
 		} else if (kind == "ident") {
 			const v = lookupVariable(expr.data[1]);
 			if (!v)
@@ -223,10 +256,9 @@ export function analyze(src: string): IREvent[] {
 
 	const analyzeStmt = (statement: Stmt, stmts: IRStmt[]): IRStmt => {
 		const kind = statement.data[0];
-		const solver = new TypeSolver();
 
 		if (kind == "block") {
-			scope = { kind: statement.data[2], variables: new Map() };
+			scope = { kind: statement.data[2], variables: new Map(), types: new Map() };
 
 			scopes.push(scope);
 			const out: IRStmt[] = [];
@@ -245,7 +277,7 @@ export function analyze(src: string): IREvent[] {
 			return ["while", analyzeExpr(exp, stmts), analyzeStmt(block, stmts)];
 		} else if (kind == "let") {
 			const [name, expr, immutable] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3], stmts), statement.data[4]];
-			const type = statement.data[2] || expr?.type;
+			const type = statement.data[2] ? analyzeType(statement.data[2]) : expr?.type;
 
 			if (!type)
 				error(statement, `Cannot declare variable without an expression or type annotation`);
@@ -254,7 +286,7 @@ export function analyze(src: string): IREvent[] {
 				error(statement, `Cannot redeclare existing variable ${name}`);
 
 			if (expr && !solver.satisfies(type, expr.type))
-				error(statement, `Declaration annotated as type ${reprType(type)} cannot be given expression of type ${reprType(expr.type)}`);
+				error(statement, `Declaration annotated as type ${reprType(solver.resolve(type))} cannot be given expression of type ${reprType(expr.type)}`);
 
 			if (interner.size >= 1000)
 				error(statement, `Cannot use more than 1000 variables, for now.`);
@@ -263,7 +295,7 @@ export function analyze(src: string): IREvent[] {
 			if (!interner.has(str))
 				interner.set(str, id);
 
-			scope.variables.set(name, { const: immutable, expr: { type: type, data: ["ident", id] } });
+			scope.variables.set(name, { const: immutable, expr: { type, data: ["ident", id] } });
 
 			if (expr) {
 				return ["let", id, type, expr];
@@ -314,6 +346,9 @@ export function analyze(src: string): IREvent[] {
 				if (!ufn)
 					error(statement, `No such function ${name}`);
 
+				for (const gen of ufn.generics)
+					scope.types.set(gen.name, generic(gen.name, gen.bound ?? undefined));
+
 				const desugared: Stmt[] = [
 					sugar(statement, ["let", "__returnval__", ufn.ret, null, false]),
 					...ufn.args.map((arg, i) =>
@@ -350,18 +385,50 @@ export function analyze(src: string): IREvent[] {
 				error(statement, `Cannot continue outside of a loop`);
 
 			error(statement, "Unimplemented: continue");
+		} else if (kind == "generic") {
+			const [, name, ty] = statement.data;
+			scope.types.set(name, ty);
+			return ["noop"];
 		}
 
 		return kind; // return "never", mark as unreachable.
 	};
 
+	const analyzeType = (t: ParsedType): Type => {
+		switch (t.data.kind) {
+			case "native":
+				const ty = lookupType(t.data.name);
+				if (!ty) error(t, `Unknown type ${t.data.name}`);
+				return ty;
+			case "generic":
+				throw `Hm`;
+			case "function":
+				const params = t.data.params.map(analyzeType);
+				const ret = analyzeType(t.data.ret);
+				return { kind: "function", params, ret };
+			case "variadic":
+				return { kind: "variadic", type: analyzeType(t.data.type) };
+			case "array":
+				return { kind: "array", item: analyzeType(t.data.item) };
+			case "union":
+				return { kind: "union", types: t.data.types.map(t => analyzeType(t)) };
+		}
+	};
+
+
 	const out: IREvent[] = [];
 	for (const obj of ast) {
 		const kind = obj.data[0];
 		if (kind == "function") {
-			const [, name, params, ret, block] = obj.data;
+			const name = obj.data[1];
+			const generics = obj.data[2].map(g => { return { name: g.name, bound: g.bound && analyzeType(g.bound) } });
+			const args = obj.data[3];
+			const ret = obj.data[4];
+			const block = obj.data[5];
+
 			block.data[2] = "function";
-			userfunctions.set(name, { args: params, ret, block });
+
+			userfunctions.set(name, { args, ret, generics, block });
 		} else if (kind == "event") {
 			const [, name, args, block] = obj.data;
 
@@ -373,7 +440,7 @@ export function analyze(src: string): IREvent[] {
 			if (event.args.length != args.length)
 				error(obj, `Event ${name} has ${event.args.length} arguments.`);
 
-			scope = { variables: new Map() };
+			scope = { variables: new Map(), types: new Map() };
 			for (const [i, arg] of args.entries()) {
 				const registered = event.args[i];
 				scope.variables.set(arg, { const: true, expr: { type: registered.type, data: ["constant", registered.ow] } });
@@ -388,7 +455,7 @@ export function analyze(src: string): IREvent[] {
 			out.push(["event", name, event.ow, b]);
 		} else if (kind == "type") {
 			const [, name, type] = obj.data;
-			usertypes.set(name, type);
+			scope.types.set(name, analyzeType(type));
 		}
 	}
 

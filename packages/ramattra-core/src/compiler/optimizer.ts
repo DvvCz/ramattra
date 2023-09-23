@@ -1,5 +1,5 @@
 import { IREvent, IRExpr, IRStmt } from "./analyzer";
-import { string, number, boolean } from "./typing";
+import { string, number, boolean } from "../typing";
 
 export default function optimize(events: IREvent[]) {
 	const optimizeExpr = (expr: IRExpr): IRExpr => {

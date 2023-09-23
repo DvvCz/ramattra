@@ -1,4 +1,4 @@
-import { type Type, native, array, number, string, boolean, union, any, variadic } from "./typing";
+import { type Type, native, array, number, string, boolean, union, any, variadic } from "../typing";
 
 export const EVENTS: Record<string, { ow: string, args: { type: Type, ow: string }[] }> = {
 	"client": {

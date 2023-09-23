@@ -1,10 +1,10 @@
 export type Type =
-	| { kind: "native", name: string }
-	| { kind: "array", item: Type }
-	| { kind: "function", params: Type[], ret: Type }
-	| { kind: "variadic", type: Type }
-	| { kind: "generic", name: string, bound?: Type }
-	| { kind: "union", types: Type[] }
+	{ kind: "native", name: string } |
+	{ kind: "array", item: Type } |
+	{ kind: "function", params: Type[], ret: Type } |
+	{ kind: "variadic", type: Type } |
+	{ kind: "generic", name: string, bound?: Type } |
+	{ kind: "union", types: Type[] }
 
 export const reprType = (ty: Type): string => {
 	switch (ty.kind) {
@@ -23,23 +23,27 @@ export const reprType = (ty: Type): string => {
 	}
 }
 
-export const native = (name: string) => { return { kind: "native", name } satisfies Type };
+export const native = (name: string) => (<Type>{ kind: "native", name });
 export const nothing = native("void");
 export const any = native("any");
 export const never = native("never");
 export const number = native("number");
 export const string = native("string");
 export const boolean = native("boolean");
-export const array = (item: Type) => { return { kind: "array", item } satisfies Type };
-export const fn = (params?: Type[], ret?: Type) => { return { kind: "function", params: params ?? [], ret: ret ?? nothing } satisfies Type };
-export const variadic = (type: Type) => { return { kind: "variadic", type } satisfies Type };
-export const generic = (name: string, bound?: Type) => { return { kind: "generic", name, bound } satisfies Type };
-export const union = (...types: Type[]) => { return { kind: "union", types } satisfies Type }
+export const array = (item: Type) => (<Type>{ kind: "array", item });
+export const fn = (params?: Type[], ret?: Type) => (<Type>{ kind: "function", params: params ?? [], ret: ret ?? nothing });
+export const variadic = (type: Type) => (<Type>{ kind: "variadic", type });
+export const generic = (name: string, bound?: Type) => (<Type>{ kind: "generic", name, bound });
+export const union = (...types: Type[]) => (<Type>{ kind: "union", types });
 
 export class TypeSolver {
-	private generics = new Map<string, Type>();
+	generics = new Map<string, Type>();
 
 	constructor() { }
+
+	deleteGeneric(name: string) {
+		this.generics.delete(name);
+	}
 
 	getGeneric(name: string) {
 		return this.generics.get(name);
@@ -49,10 +53,21 @@ export class TypeSolver {
 		this.generics.set(name, type);
 	}
 
+	resolve(ty: Type): Type {
+		if (ty.kind == "generic") {
+			return this.generics.get(ty.name) ?? ty;
+		}
+
+		return ty;
+	}
+
 	/**
 	 * Returns if right side satisfies type constraints of left side.
 	 */
 	satisfies(lhs: Type, rhs: Type): boolean {
+		lhs = this.resolve(lhs);
+		rhs = this.resolve(rhs);
+
 		if (lhs.kind == "native" && lhs.name == "any")
 			return true;
 

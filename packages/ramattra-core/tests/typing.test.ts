@@ -1,5 +1,5 @@
 import { expect, it, test } from "vitest";
-import { TypeSolver, any, never, number, string, boolean, array, fn, variadic, generic } from "../src/compiler/typing";
+import { TypeSolver, any, never, number, string, boolean, array, fn, variadic, generic } from "../src/typing";
 
 test("all types should satisfy any", () => {
 	const solver = new TypeSolver();

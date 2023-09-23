@@ -65,8 +65,8 @@ it("should parse typeof", () => {
 
 it("should parse arrays", () => {
 	expect(exp("[1, 2, 3]")).toMatchObject({ data: ["array", null, [{ data: ["number", 1] }, { data: ["number", 2] }, { data: ["number", 3] }]] });
-	expect(exp("<number>[1, 2, 3]")).toMatchObject({ data: ["array", { kind: "native", name: "number" }, [{ data: ["number", 1] }, { data: ["number", 2] }, { data: ["number", 3] }]] });
-	expect(exp("<string>[]")).toMatchObject({ data: ["array", { kind: "native", name: "string" }, []] });
+	expect(exp("<number>[1, 2, 3]")).toMatchObject({ data: ["array", { kind: "unresolved", name: "number" }, [{ data: ["number", 1] }, { data: ["number", 2] }, { data: ["number", 3] }]] });
+	expect(exp("<string>[]")).toMatchObject({ data: ["array", { kind: "unresolved", name: "string" }, []] });
 });
 
 it("should parse grouped expression", () => {
