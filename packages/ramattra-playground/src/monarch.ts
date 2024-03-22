@@ -7,7 +7,7 @@ export default {
 	operators: ["=", ">", "<", "!", ":", "==", "<=", ">=", "!=", "&&", "||", "+", "-", "*", "/", "%", "+=", "-=", "*=", "/="],
 
 	symbols: /[=><!:&|+\-*\/\^%]+/,
-	escapes: /\\(?:[abfnrtv\\""])/, // Strings don"t actually support escapes for now but here's this.
+	escapes: /\\(?:[abfnrtv\\""])/, // Strings don't actually support escapes for now but here's this.
 
 	// The main tokenizer for our languages
 	tokenizer: {

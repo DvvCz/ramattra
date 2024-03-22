@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
-import { Error, assemble } from "@ramattra/ramattra-core";
+import { type Error, assemble } from "@ramattra/ramattra-core";
 
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
@@ -67,9 +67,9 @@ const App = () => {
 	return <>
 		<div class="top">
 			<div class="logo">
-				<button aria-label="GitHub Logo">
+				<button type="button" aria-label="GitHub Logo">
 					<a aria-label="GitHub Repository" href="https://github.com/DvvCz/Ramattra">
-						<i class="fa-brands fa-github"></i>
+						<i class="fa-brands fa-github" />
 					</a>
 				</button>
 
@@ -79,9 +79,9 @@ const App = () => {
 			</div>
 
 			<div class="nav">
-				<button>
+				<button type="button">
 					<a href="https://github.com/DvvCz/Ramattra/wiki">
-						<i class="fas fa-book"></i>
+						<i class="fas fa-book" />
 						Documentation
 					</a>
 				</button>
@@ -91,8 +91,8 @@ const App = () => {
 		<div class="main">
 			<div class="editor">
 				<div class="toolbar">
-					<button onClick={compile}>Compile</button>
-					<button onClick={share}>Share</button>
+					<button type="button" onClick={compile}>Compile</button>
+					<button type="button" onClick={share}>Share</button>
 				</div>
 
 				<Editor
@@ -115,7 +115,7 @@ const App = () => {
 					{outCode}
 				</textarea>
 
-				<button onClick={_ => navigator.clipboard.writeText(outCode)}>
+				<button type="button" onClick={_ => navigator.clipboard.writeText(outCode)}>
 					Copy to Clipboard
 				</button>
 			</div>

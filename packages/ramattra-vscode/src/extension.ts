@@ -1,9 +1,7 @@
-import * as path from "path";
-import { ExtensionContext } from "vscode";
+import * as path from "node:path";
+import type { ExtensionContext } from "vscode";
 
-import {
-	LanguageClient,
-} from "vscode-languageclient/node";
+import { LanguageClient } from "vscode-languageclient/node";
 
 let client: LanguageClient;
 

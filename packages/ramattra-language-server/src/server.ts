@@ -1,11 +1,11 @@
 import { FUNCTIONS, analyze, type Error, CONSTANTS, EVENTS, reprType } from "@ramattra/ramattra-core";
 import { dedent } from "@ramattra/ramattra-util";
-import { CompletionItemKind, Connection, Diagnostic, DiagnosticSeverity, TextDocuments, TextDocumentSyncKind } from "vscode-languageserver";
+import { CompletionItemKind, type Connection, type Diagnostic, DiagnosticSeverity, TextDocuments, TextDocumentSyncKind } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 export const onInit = (connection: Connection) => {
 	connection.onInitialize(_params => {
-		connection.console.log(`[Server] Started and initialize received`);
+		connection.console.log("[Server] Started and initialize received");
 
 		return {
 			capabilities: {
@@ -83,7 +83,7 @@ export const onInit = (connection: Connection) => {
 		const word = text.slice(start, end);
 
 		if (FUNCTIONS[word]) {
-			const fn = FUNCTIONS[word]!;
+			const fn = FUNCTIONS[word];
 
 			return {
 				contents: {
@@ -96,7 +96,9 @@ export const onInit = (connection: Connection) => {
 					`
 				},
 			}
-		} else if (CONSTANTS[word]) {
+		}
+
+		if (CONSTANTS[word]) {
 			const constant = CONSTANTS[word];
 			return {
 				contents: {
@@ -108,7 +110,9 @@ export const onInit = (connection: Connection) => {
 					`
 				},
 			}
-		} else if (EVENTS[word]) {
+		}
+		
+		if (EVENTS[word]) {
 			const event = EVENTS[word];
 			return {
 				contents: {
@@ -159,8 +163,8 @@ export const onInit = (connection: Connection) => {
 
 	connection.onCompletionResolve(item => {
 		const data = item.data as [CompletionItemKind, string];
-		if (data[0] == CompletionItemKind.Function) {
-			const fn = FUNCTIONS[data[1]]!;
+		if (data[0] === CompletionItemKind.Function) {
+			const fn = FUNCTIONS[data[1]];
 			item.detail = `${data[1]}(${fn?.args.map(x => x.default ? `${reprType(x.type)} = ${x.default}` : reprType(x.type)).join(", ")})`
 			item.documentation = {
 				kind: "markdown",
@@ -169,8 +173,8 @@ export const onInit = (connection: Connection) => {
 					[workshop.codes](${WORKSHOP_CODES_HREF}${fn.ow.replaceAll(" ", "+").toLowerCase()})
 				`
 			}
-		} else if (data[0] == CompletionItemKind.Constant) {
-			const constant = CONSTANTS[data[1]]!;
+		} else if (data[0] === CompletionItemKind.Constant) {
+			const constant = CONSTANTS[data[1]];
 			item.detail = `${data[1]}: ${reprType(constant.type)}`;
 			item.documentation = {
 				kind: "markdown",
@@ -178,8 +182,8 @@ export const onInit = (connection: Connection) => {
 					**Overwatch Value**: \`${constant.ow}\`
 				`
 			}
-		} else if (data[0] == CompletionItemKind.Event) {
-			const event = EVENTS[data[1]]!;
+		} else if (data[0] === CompletionItemKind.Event) {
+			const event = EVENTS[data[1]];
 			item.detail = `event ${data[1]}(${event.args.map(a => reprType(a.type)).join(", ")})`
 			item.documentation = {
 				kind: "markdown",

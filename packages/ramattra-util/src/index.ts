@@ -5,7 +5,7 @@ export function dedent(template: TemplateStringsArray, ...subs: any[]): string {
 	let min = null;
 	for (const line of lines) {
 		let ptr = 0;
-		while (line.charAt(ptr) == "\t") ptr++;
+		while (line.charAt(ptr) === "\t") ptr++;
 
 		if (min) {
 			if (ptr < min) {
@@ -15,7 +15,7 @@ export function dedent(template: TemplateStringsArray, ...subs: any[]): string {
 			min = ptr;
 		}
 
-		if (min == 0) break;
+		if (min === 0) break;
 	}
 
 	if (min) {
@@ -24,7 +24,7 @@ export function dedent(template: TemplateStringsArray, ...subs: any[]): string {
 		}
 
 		return lines.join("\n");
-	} else {
-		return middle;
 	}
+
+	return middle;
 }

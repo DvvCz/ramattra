@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { assemble, parse } from "@ramattra/ramattra-core";
 import * as fs from "node:fs/promises";
-import { Error } from "@ramattra/ramattra-core/src/compiler/parser";
+import type { Error } from "@ramattra/ramattra-core/src/compiler/parser";
 
 const program = new Command();
 

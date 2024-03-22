@@ -147,7 +147,7 @@ export const CONSTANTS: Record<string, { ow: string, type: Type }> = {
 	"ROUND_DOWN": { ow: "Down", type: native("rounding") },
 };
 
-export const FUNCTIONS: Record<string, { ow: string, args: { type: Type, default?: string }[], ret?: Type } | undefined> = {
+export const FUNCTIONS: Record<string, { ow: string, args: { type: Type, default?: string }[], ret?: Type }> = {
 	"disableGameModeHUD": { ow: "Disable Game Mode HUD", args: [{ type: native("player") }] },
 
 	"createHUDText": {
