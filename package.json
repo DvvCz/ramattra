@@ -5,7 +5,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"playground:dev": "npm run dev -w @ramattra/ramattra-playground",
+		"playground:dev": "cd packages/ramattra-playground && npm run dev",
 		"build": "tsc -b tsconfig.build.json",
 		"test": "vitest",
 		"coverage": "vitest run --coverage"
