@@ -1,5 +1,5 @@
 import { analyze } from "../src/compiler/analyzer.js";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 
 it("should allow indexing arrays", () => {
 	expect(() => analyze(`

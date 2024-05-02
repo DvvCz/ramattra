@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { dedent } from "../src/index.js";
 
 it("should dedent simple string", () => {

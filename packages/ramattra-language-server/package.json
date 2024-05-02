@@ -6,7 +6,6 @@
 	"private": true,
 	"main": "dist/node.js",
 	"scripts": {
-		"test": "vitest",
 		"watch": "tsc --watch"
 	},
 	"dependencies": {

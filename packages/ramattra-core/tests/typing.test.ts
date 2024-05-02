@@ -1,4 +1,4 @@
-import { expect, it, test } from "vitest";
+import { expect, it, test } from "bun:test";
 import { TypeSolver, any, never, number, string, boolean, array, fn, variadic, generic } from "../src/compiler/typing";
 
 test("all types should satisfy any", () => {

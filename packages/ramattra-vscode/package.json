@@ -14,14 +14,8 @@
 		"languages": [
 			{
 				"id": "ramattra",
-				"aliases": [
-					"Ramattra",
-					"ramattra"
-				],
-				"extensions": [
-					".ram",
-					".ramattra"
-				],
+				"aliases": ["Ramattra", "ramattra"],
+				"extensions": [".ram", ".ramattra"],
 				"configuration": "./language-configuration.json"
 			}
 		],
@@ -33,9 +27,7 @@
 			}
 		]
 	},
-	"scripts": {
-		"test": "vitest"
-	},
+	"scripts": {},
 	"dependencies": {
 		"vscode-languageclient": "^8.1.0"
 	},

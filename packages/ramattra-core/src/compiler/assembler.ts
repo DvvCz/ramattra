@@ -1,5 +1,5 @@
 import { dedent } from "@ramattra/ramattra-util";
-import { analyze, IRExpr, IRStmt } from "./analyzer.js";
+import { analyze, type IRExpr, type IRStmt } from "./analyzer.js";
 import optimize from "./optimizer.js";
 
 export function assemble(src: string): string {

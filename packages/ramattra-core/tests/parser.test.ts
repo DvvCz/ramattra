@@ -1,5 +1,5 @@
 import { parse, Parser } from "../src/compiler/parser.js";
-import { expect, it } from "vitest";
+import { expect, it } from "bun:test";
 import { dedent } from "@ramattra/ramattra-util";
 
 const exp = (src: string) => Parser.parse(src, { startRule: "Expr" });

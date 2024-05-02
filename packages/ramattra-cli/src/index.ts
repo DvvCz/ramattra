@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import { Command } from "commander";
 import { assemble, parse } from "@ramattra/ramattra-core";
 import * as fs from "node:fs/promises";
