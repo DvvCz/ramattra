@@ -1,9 +1,29 @@
 import { EVENTS, CONSTANTS, FUNCTIONS } from "./std.js";
-import { parse, Node, Stmt, Expr, ExprData, StmtData } from "./parser.js";
-import { Type, TypeSolver, any, array, boolean, native, nothing, number, reprType, string } from "./typing.js";
+
+import {
+	parse,
+	type Node,
+	type Stmt,
+	type Expr,
+	type ExprData,
+	type StmtData,
+} from "./parser.js";
+
+import {
+	type Type,
+	TypeSolver,
+	any,
+	array,
+	boolean,
+	native,
+	nothing,
+	number,
+	reprType,
+	string,
+} from "./typing";
 
 export type IRStmt =
-	["block", IRStmt[]]
+	| ["block", IRStmt[]]
 	| ["if", IRExpr, IRStmt]
 	| ["while", IRExpr, IRStmt]
 	| ["let", number, Type, IRExpr]
@@ -12,56 +32,52 @@ export type IRStmt =
 	| ["call", string, IRExpr[]]
 	| ["noop"]
 	| ["break"]
-	| ["continue"]
+	| ["continue"];
 
-export type IRExpr =
-	{ type: Type, data: IRExprData }
+export type IRExpr = { type: Type; data: IRExprData };
 
 type IRExprData =
-	["+", IRExpr, IRExpr] |
-	["-", IRExpr, IRExpr] |
-	["*", IRExpr, IRExpr] |
-	["/", IRExpr, IRExpr] |
+	| ["+", IRExpr, IRExpr]
+	| ["-", IRExpr, IRExpr]
+	| ["*", IRExpr, IRExpr]
+	| ["/", IRExpr, IRExpr]
+	| ["==", IRExpr, IRExpr]
+	| ["!=", IRExpr, IRExpr]
+	| [">=", IRExpr, IRExpr]
+	| [">", IRExpr, IRExpr]
+	| ["<", IRExpr, IRExpr]
+	| ["<=", IRExpr, IRExpr]
+	| ["||", IRExpr, IRExpr]
+	| ["&&", IRExpr, IRExpr]
+	| ["index", IRExpr, IRExpr]
+	| ["call", string, IRExpr[]]
+	| ["!", IRExpr]
+	| ["constant", string]
+	| ["ident", number]
+	| ["string", string]
+	| ["boolean", boolean]
+	| ["array", Type | null, IRExpr[]]
+	| ["number", number];
 
-	["==", IRExpr, IRExpr] |
-	["!=", IRExpr, IRExpr] |
-	[">=", IRExpr, IRExpr] |
-	[">", IRExpr, IRExpr] |
-	["<", IRExpr, IRExpr] |
-	["<=", IRExpr, IRExpr] |
+export type IREvent = ["event", string, string, IRStmt];
 
-	["||", IRExpr, IRExpr] |
-	["&&", IRExpr, IRExpr] |
-
-	["index", IRExpr, IRExpr] |
-	["call", string, IRExpr[]] |
-
-	["!", IRExpr] |
-
-	["constant", string] |
-	["ident", number] |
-	["string", string] |
-	["boolean", boolean] |
-	["array", Type | null, IRExpr[]] |
-	["number", number]
-
-export type IREvent =
-	["event", string, string, IRStmt];
-
-type Scope = { kind?: null | "loop" | "function", variables: Map<string, { const: boolean, expr: IRExpr }> };
+type Scope = {
+	kind?: null | "loop" | "function";
+	variables: Map<string, { const: boolean; expr: IRExpr }>;
+};
 
 function error(e: Node<any>, message: string): never {
 	throw {
 		message,
-		location: e.location
-	}
+		location: e.location,
+	};
 }
 
 function sugar(e: Node<any>, data: ExprData): Expr;
 function sugar(e: Node<any>, data: StmtData): Stmt;
 
 function sugar(e: Node<any>, data: ExprData | StmtData) {
-	return { location: e.location, data }
+	return { location: e.location, data };
 }
 
 export function analyze(src: string): IREvent[] {
@@ -71,150 +87,267 @@ export function analyze(src: string): IREvent[] {
 	const interner = new Map<string, number>();
 	const scopes = [scope];
 
-	const userfunctions: Map<string, { args: { type: Type, name: string, default?: string }[], ret: Type, block: Stmt }> = new Map();
+	const userfunctions: Map<
+		string,
+		{
+			args: { type: Type; name: string; default?: string }[];
+			ret: Type;
+			block: Stmt;
+		}
+	> = new Map();
 	const usertypes: Map<string, Type> = new Map();
 
 	const lookupKind = (kind: Scope["kind"]): boolean =>
-		scopes.find(i => i.kind == kind) !== undefined;
+		scopes.find((i) => i.kind === kind) !== undefined;
 
-	const lookupVariable = (name: string): { const: boolean, expr: IRExpr } | undefined => {
-
+	const lookupVariable = (
+		name: string,
+	): { const: boolean; expr: IRExpr } | undefined => {
 		for (let i = scopes.length - 1; i >= 0; i--) {
 			const scope = scopes[i];
 			const value = scope.variables.get(name);
 
-			if (value)
-				return value;
+			if (value) return value;
 		}
 
 		const constant = CONSTANTS[name];
 		if (constant)
-			return { const: true, expr: { type: constant.type, data: ["constant", constant.ow] } }
-	}
+			return {
+				const: true,
+				expr: { type: constant.type, data: ["constant", constant.ow] },
+			};
+	};
 
 	const analyzeExpr = (expr: Expr, stmts: IRStmt[]): IRExpr => {
 		const kind = expr.data[0];
 		const solver = new TypeSolver();
 
-		if (kind == "+") {
-			const [lhs, rhs] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)];
+		if (kind === "+") {
+			const [lhs, rhs] = [
+				analyzeExpr(expr.data[1], stmts),
+				analyzeExpr(expr.data[2], stmts),
+			];
 
 			if (!solver.satisfies(lhs.type, rhs.type))
-				error(expr, `Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on differing types (${reprType(
+						lhs.type,
+					)} and ${reprType(rhs.type)})`,
+				);
 
-			if (lhs.type.kind != "native" || (lhs.type.name != "number" && lhs.type.name != "string"))
-				error(expr, `Can only add numbers and strings`);
+			if (
+				lhs.type.kind !== "native" ||
+				(lhs.type.name !== "number" && lhs.type.name !== "string")
+			)
+				error(expr, "Can only add numbers and strings");
 
 			return { type: lhs.type, data: [kind, lhs, rhs] };
-		} else if (kind == "-" || kind == "*" || kind == "/") {
-			const [lhs, rhs] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)];
+		}
+
+		if (kind === "-" || kind === "*" || kind === "/") {
+			const [lhs, rhs] = [
+				analyzeExpr(expr.data[1], stmts),
+				analyzeExpr(expr.data[2], stmts),
+			];
 
 			if (!solver.satisfies(lhs.type, rhs.type))
-				error(expr, `Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on differing types (${reprType(
+						lhs.type,
+					)} and ${reprType(rhs.type)})`,
+				);
 
 			if (!solver.satisfies(lhs.type, number))
-				error(expr, `Cannot perform ${kind} operation on non-numeric expressions`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on non-numeric expressions`,
+				);
 
 			return { type: number, data: [kind as any, lhs, rhs] };
-		} else if (kind == "==" || kind == "!=" || kind == ">=" || kind == ">" || kind == "<" || kind == "<=") {
-			const [lhs, rhs] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)]
+		}
+
+		if (
+			kind === "==" ||
+			kind === "!=" ||
+			kind === ">=" ||
+			kind === ">" ||
+			kind === "<" ||
+			kind === "<="
+		) {
+			const [lhs, rhs] = [
+				analyzeExpr(expr.data[1], stmts),
+				analyzeExpr(expr.data[2], stmts),
+			];
 
 			if (!solver.satisfies(lhs.type, rhs.type))
-				error(expr, `Cannot perform ${kind} operation on differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on differing types (${reprType(
+						lhs.type,
+					)} and ${reprType(rhs.type)})`,
+				);
 
 			return { type: boolean, data: [kind as any, lhs, rhs] };
-		} else if (kind == "||" || kind == "&&") {
-			const [lhs, rhs] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)]
+		}
+
+		if (kind === "||" || kind === "&&") {
+			const [lhs, rhs] = [
+				analyzeExpr(expr.data[1], stmts),
+				analyzeExpr(expr.data[2], stmts),
+			];
 
 			if (!solver.satisfies(lhs.type, rhs.type))
-				error(expr, `Cannot perform ${kind} operation on expressions of differing types (${reprType(lhs.type)} and ${reprType(rhs.type)})`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on expressions of differing types (${reprType(
+						lhs.type,
+					)} and ${reprType(rhs.type)})`,
+				);
 
 			if (!solver.satisfies(lhs.type, boolean))
-				error(expr, `Cannot perform ${kind} operation on non-boolean expressions`);
+				error(
+					expr,
+					`Cannot perform ${kind} operation on non-boolean expressions`,
+				);
 
 			return { type: boolean, data: [kind as any, lhs, rhs] };
-		} else if (kind == "index") {
-			const [obj, index] = [analyzeExpr(expr.data[1], stmts), analyzeExpr(expr.data[2], stmts)];
+		}
+
+		if (kind === "index") {
+			const [obj, index] = [
+				analyzeExpr(expr.data[1], stmts),
+				analyzeExpr(expr.data[2], stmts),
+			];
 
 			if (!solver.satisfies(array(any), obj.type))
 				error(expr, `Cannot index type of ${reprType(obj.type)}`);
 
 			if (!solver.satisfies(index.type, number))
-				error(expr, `Can only index an array with a number`);
+				error(expr, "Can only index an array with a number");
 
 			// TODO: Make satisfies signature deduce type as array, if possible
 			return { type: (obj.type as any).item, data: [kind, obj, index] };
-		} else if (kind == "call") {
+		}
+
+		if (kind === "call") {
 			const [name, args] = [expr.data[1], expr.data[2]];
 
 			const fn = FUNCTIONS[name];
 			if (fn) {
-				const iargs = args.map(a => analyzeExpr(a, stmts));
-				const types = iargs.map(a => a.type);
+				const iargs = args.map((a) => analyzeExpr(a, stmts));
+				const types = iargs.map((a) => a.type);
 
 				for (const expected of fn.args) {
-					if (types.length == 0) {
+					if (types.length === 0) {
 						if (expected.default) {
-							iargs.push({ type: expected.type, data: ["constant", expected.default] });
+							iargs.push({
+								type: expected.type,
+								data: ["constant", expected.default],
+							});
 							continue;
-						} else {
-							error(expr, `Not enough arguments passed to ${name}, expected ${reprType(expected.type)}`);
 						}
+
+						error(
+							expr,
+							`Not enough arguments passed to ${name}, expected ${reprType(
+								expected.type,
+							)}`,
+						);
 					}
 
 					const given = types.shift()!;
 					if (!solver.satisfies(expected.type, given))
-						error(expr, `Expected ${reprType(expected.type)}, got ${reprType(given)}`)
+						error(
+							expr,
+							`Expected ${reprType(
+								expected.type,
+							)}, got ${reprType(given)}`,
+						);
 				}
 
-				return { type: fn.ret ?? nothing, data: ["call", fn.ow, iargs] };
-			} else {
-				const ufn = userfunctions.get(name);
-
-				if (!ufn)
-					error(expr, `No such function ${name}`);
-
-
-				stmts.push(analyzeStmt(sugar(expr, ["let", "__returnval__", ufn.ret, null, false]), stmts));
-
-				const inner = sugar(expr, ["block", [
-					...ufn.args.map((arg, i) =>
-						sugar(expr, ["let", arg.name, arg.type, args[i], true])
-					),
-					...ufn.block.data[1] as Stmt[]
-				], "function"]);
-
-				stmts.push(analyzeStmt(inner, stmts));
-
-				return analyzeExpr(sugar(expr, ["ident", "__returnval__"]), stmts);
+				return {
+					type: fn.ret ?? nothing,
+					data: ["call", fn.ow, iargs],
+				};
 			}
-		} else if (kind == "!") {
-			return { type: boolean, data: [kind, analyzeExpr(expr.data[1], stmts)] };
-		} else if (kind == "typeof") {
+
+			const ufn = userfunctions.get(name);
+			if (!ufn) error(expr, `No such function ${name}`);
+
+			stmts.push(
+				analyzeStmt(
+					sugar(expr, ["let", "__returnval__", ufn.ret, null, false]),
+					stmts,
+				),
+			);
+
+			const inner = sugar(expr, [
+				"block",
+				[
+					...ufn.args.map((arg, i) =>
+						sugar(expr, ["let", arg.name, arg.type, args[i], true]),
+					),
+					...(ufn.block.data[1] as Stmt[]),
+				],
+				"function",
+			]);
+
+			stmts.push(analyzeStmt(inner, stmts));
+
+			return analyzeExpr(sugar(expr, ["ident", "__returnval__"]), stmts);
+		}
+
+		if (kind === "!") {
+			return {
+				type: boolean,
+				data: [kind, analyzeExpr(expr.data[1], stmts)],
+			};
+		}
+
+		if (kind === "typeof") {
 			const value = analyzeExpr(expr.data[1], stmts);
 			return { type: string, data: ["string", reprType(value.type)] };
-		} else if (kind == "string" || kind == "boolean" || kind == "number") {
+		}
+
+		if (kind === "string" || kind === "boolean" || kind === "number") {
 			return { type: native(kind), data: [kind as any, expr.data[1]] };
-		} else if (kind == "array") {
-			const values = expr.data[2].map(a => analyzeExpr(a, stmts));
+		}
+
+		if (kind === "array") {
+			const values = expr.data[2].map((a) => analyzeExpr(a, stmts));
 			let type = expr.data[1];
 
 			for (const value of values) {
 				if (!type) {
 					type = value.type;
 				} else if (!solver.satisfies(value.type, type)) {
-					error(expr, `Array of type ${reprType(type)} cannot also hold a ${reprType(value.type)} type.`);
+					error(
+						expr,
+						`Array of type ${reprType(
+							type,
+						)} cannot also hold a ${reprType(value.type)} type.`,
+					);
 				}
 			}
 
 			if (!type)
-				error(expr, `Empty array must be given a tagged type <T>`);
+				error(expr, "Empty array must be given a tagged type <T>");
 
-			return { type: array(type), data: [kind, expr.data[1], expr.data[2].map(a => analyzeExpr(a, stmts))] };
-		} else if (kind == "ident") {
+			return {
+				type: array(type),
+				data: [
+					kind,
+					expr.data[1],
+					expr.data[2].map((a) => analyzeExpr(a, stmts)),
+				],
+			};
+		}
+
+		if (kind === "ident") {
 			const v = lookupVariable(expr.data[1]);
-			if (!v)
-				error(expr, `Variable ${expr.data[1]} is not defined.`);
+			if (!v) error(expr, `Variable ${expr.data[1]} is not defined.`);
 			return v.expr;
 		}
 
@@ -225,7 +358,7 @@ export function analyze(src: string): IREvent[] {
 		const kind = statement.data[0];
 		const solver = new TypeSolver();
 
-		if (kind == "block") {
+		if (kind === "block") {
 			scope = { kind: statement.data[2], variables: new Map() };
 
 			scopes.push(scope);
@@ -237,117 +370,212 @@ export function analyze(src: string): IREvent[] {
 			scope = scopes.pop()!;
 
 			return ["block", out];
-		} else if (kind == "if") {
-			return ["if", analyzeExpr(statement.data[1], stmts), analyzeStmt(statement.data[2], stmts)];
-		} else if (kind == "while") {
+		}
+
+		if (kind === "if") {
+			return [
+				"if",
+				analyzeExpr(statement.data[1], stmts),
+				analyzeStmt(statement.data[2], stmts),
+			];
+		}
+
+		if (kind === "while") {
 			const [, exp, block] = statement.data;
 			block.data[2] = "loop";
-			return ["while", analyzeExpr(exp, stmts), analyzeStmt(block, stmts)];
-		} else if (kind == "let") {
-			const [name, expr, immutable] = [statement.data[1], statement.data[3] && analyzeExpr(statement.data[3], stmts), statement.data[4]];
+			return [
+				"while",
+				analyzeExpr(exp, stmts),
+				analyzeStmt(block, stmts),
+			];
+		}
+
+		if (kind === "let") {
+			const [name, expr, immutable] = [
+				statement.data[1],
+				statement.data[3] && analyzeExpr(statement.data[3], stmts),
+				statement.data[4],
+			];
 			const type = statement.data[2] || expr?.type;
 
 			if (!type)
-				error(statement, `Cannot declare variable without an expression or type annotation`);
+				error(
+					statement,
+					"Cannot declare variable without an expression or type annotation",
+				);
 
 			if (scope.variables.has(name))
 				error(statement, `Cannot redeclare existing variable ${name}`);
 
 			if (expr && !solver.satisfies(type, expr.type))
-				error(statement, `Declaration annotated as type ${reprType(type)} cannot be given expression of type ${reprType(expr.type)}`);
+				error(
+					statement,
+					`Declaration annotated as type ${reprType(
+						type,
+					)} cannot be given expression of type ${reprType(
+						expr.type,
+					)}`,
+				);
 
 			if (interner.size >= 1000)
-				error(statement, `Cannot use more than 1000 variables, for now.`);
+				error(
+					statement,
+					"Cannot use more than 1000 variables, for now.",
+				);
 
 			const [str, id] = [`${name}${scopes.length}`, interner.size];
-			if (!interner.has(str))
-				interner.set(str, id);
+			if (!interner.has(str)) interner.set(str, id);
 
-			scope.variables.set(name, { const: immutable, expr: { type: type, data: ["ident", id] } });
+			scope.variables.set(name, {
+				const: immutable,
+				expr: { type: type, data: ["ident", id] },
+			});
 
 			if (expr) {
 				return ["let", id, type, expr];
-			} else {
-				return ["noop"];
 			}
-		} else if (kind == "assign") {
-			const [name, expr] = [statement.data[1], analyzeExpr(statement.data[2], stmts)];
+
+			return ["noop"];
+		}
+
+		if (kind === "assign") {
+			const [name, expr] = [
+				statement.data[1],
+				analyzeExpr(statement.data[2], stmts),
+			];
 
 			const v = lookupVariable(name);
 			if (!v)
-				error(statement, `Variable ${name} has not been declared. Maybe you meant let ${name}?`);
+				error(
+					statement,
+					`Variable ${name} has not been declared. Maybe you meant let ${name}?`,
+				);
 
 			if (!solver.satisfies(v.expr.type, expr.type))
-				error(statement, `Cannot assign value of ${reprType(expr.type)} to variable of type ${reprType(v.expr.type)}`);
+				error(
+					statement,
+					`Cannot assign value of ${reprType(
+						expr.type,
+					)} to variable of type ${reprType(v.expr.type)}`,
+				);
 
-			if (v.const)
-				error(statement, `Cannot assign to constant ${name}`);
+			if (v.const) error(statement, `Cannot assign to constant ${name}`);
 
 			return ["assign", v.expr.data[1] as number, expr];
-		} else if (kind == "call") {
+		}
+
+		if (kind === "call") {
 			const [name, args] = [statement.data[1], statement.data[2]];
 
 			const fn = FUNCTIONS[name];
 			if (fn) {
-				const iargs = args.map(a => analyzeExpr(a, stmts));
-				const types = iargs.map(a => a.type);
+				const iargs = args.map((a) => analyzeExpr(a, stmts));
+				const types = iargs.map((a) => a.type);
 
 				for (const expected of fn.args) {
-					if (types.length == 0) {
+					if (types.length === 0) {
 						if (expected.default) {
-							iargs.push({ type: expected.type, data: ["constant", expected.default] });
+							iargs.push({
+								type: expected.type,
+								data: ["constant", expected.default],
+							});
 							continue;
-						} else {
-							error(statement, `Not enough arguments passed to ${name}, expected ${reprType(expected.type)}`);
 						}
+
+						error(
+							statement,
+							`Not enough arguments passed to ${name}, expected ${reprType(
+								expected.type,
+							)}`,
+						);
 					}
 
 					const given = types.shift()!;
 					if (!solver.satisfies(expected.type, given))
-						error(statement, `Expected ${reprType(expected.type)}, got ${reprType(given)}`)
+						error(
+							statement,
+							`Expected ${reprType(
+								expected.type,
+							)}, got ${reprType(given)}`,
+						);
 				}
 
 				return ["call", fn.ow, iargs];
-			} else {
-				const ufn = userfunctions.get(name);
-
-				if (!ufn)
-					error(statement, `No such function ${name}`);
-
-				const desugared: Stmt[] = [
-					sugar(statement, ["let", "__returnval__", ufn.ret, null, false]),
-					...ufn.args.map((arg, i) =>
-						sugar(statement, ["let", arg.name, arg.type, args[i], true])
-					),
-					...ufn.block.data[1] as Stmt[]
-				];
-
-				return analyzeStmt(sugar(statement, ["block", desugared, "function"]), stmts);
 			}
-		} else if (kind == "iassign") {
-			const [obj, index, value] = [analyzeExpr(statement.data[1], stmts), statement.data[2], analyzeExpr(statement.data[3], stmts)];
+
+			const ufn = userfunctions.get(name);
+
+			if (!ufn) error(statement, `No such function ${name}`);
+
+			const desugared: Stmt[] = [
+				sugar(statement, [
+					"let",
+					"__returnval__",
+					ufn.ret,
+					null,
+					false,
+				]),
+				...ufn.args.map((arg, i) =>
+					sugar(statement, [
+						"let",
+						arg.name,
+						arg.type,
+						args[i],
+						true,
+					]),
+				),
+				...(ufn.block.data[1] as Stmt[]),
+			];
+
+			return analyzeStmt(
+				sugar(statement, ["block", desugared, "function"]),
+				stmts,
+			);
+		}
+
+		if (kind === "iassign") {
+			const [obj, index, value] = [
+				analyzeExpr(statement.data[1], stmts),
+				statement.data[2],
+				analyzeExpr(statement.data[3], stmts),
+			];
 
 			if (!solver.satisfies(obj.type, native("player")))
-				error(statement, `Can only use indexing assignment on player`);
+				error(statement, "Can only use indexing assignment on player");
 
 			return ["iassign", obj, index, value];
-		} else if (kind == "return") {
+		}
+
+		if (kind === "return") {
 			if (!lookupKind("function"))
-				error(statement, `Cannot return outside of a function`);
+				error(statement, "Cannot return outside of a function");
 
 			const exp = statement.data[1];
 			if (!exp)
-				error(statement, `Currently can only return with an expression`);
+				error(
+					statement,
+					"Currently can only return with an expression",
+				);
 
-			return analyzeStmt({ location: statement.location, data: ["assign", "__returnval__", exp] }, stmts);
-		} else if (kind == "break") {
+			return analyzeStmt(
+				{
+					location: statement.location,
+					data: ["assign", "__returnval__", exp],
+				},
+				stmts,
+			);
+		}
+
+		if (kind === "break") {
 			if (!lookupKind("loop"))
-				error(statement, `Cannot break outside of a loop`);
+				error(statement, "Cannot break outside of a loop");
 
 			return ["break"];
-		} else if (kind == "continue") {
+		}
+
+		if (kind === "continue") {
 			if (!lookupKind("loop"))
-				error(statement, `Cannot continue outside of a loop`);
+				error(statement, "Cannot continue outside of a loop");
 
 			error(statement, "Unimplemented: continue");
 		}
@@ -358,25 +586,30 @@ export function analyze(src: string): IREvent[] {
 	const out: IREvent[] = [];
 	for (const obj of ast) {
 		const kind = obj.data[0];
-		if (kind == "function") {
+		if (kind === "function") {
 			const [, name, params, ret, block] = obj.data;
 			block.data[2] = "function";
 			userfunctions.set(name, { args: params, ret, block });
-		} else if (kind == "event") {
+		} else if (kind === "event") {
 			const [, name, args, block] = obj.data;
 
 			const event = EVENTS[name];
 
-			if (!event)
-				error(obj, `Event ${name} does not exist.`);
+			if (!event) error(obj, `Event ${name} does not exist.`);
 
-			if (event.args.length != args.length)
+			if (event.args.length !== args.length)
 				error(obj, `Event ${name} has ${event.args.length} arguments.`);
 
 			scope = { variables: new Map() };
 			for (const [i, arg] of args.entries()) {
 				const registered = event.args[i];
-				scope.variables.set(arg, { const: true, expr: { type: registered.type, data: ["constant", registered.ow] } });
+				scope.variables.set(arg, {
+					const: true,
+					expr: {
+						type: registered.type,
+						data: ["constant", registered.ow],
+					},
+				});
 			}
 
 			scopes.push(scope);
@@ -386,7 +619,7 @@ export function analyze(src: string): IREvent[] {
 			scope = scopes.pop()!;
 
 			out.push(["event", name, event.ow, b]);
-		} else if (kind == "type") {
+		} else if (kind === "type") {
 			const [, name, type] = obj.data;
 			usertypes.set(name, type);
 		}

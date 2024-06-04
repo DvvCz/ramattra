@@ -1,5 +1,17 @@
-import { expect, it, test } from "bun:test";
-import { TypeSolver, any, never, number, string, boolean, array, fn, variadic, generic } from "../src/compiler/typing";
+import { expect, test } from "bun:test";
+
+import {
+	TypeSolver,
+	any,
+	never,
+	number,
+	string,
+	boolean,
+	array,
+	fn,
+	variadic,
+	generic,
+} from "./typing";
 
 test("all types should satisfy any", () => {
 	const solver = new TypeSolver();
@@ -71,17 +83,27 @@ test("generic bounds should work", () => {
 	expect(solver.satisfies(generic("T", array(any)), number)).toBeFalsy();
 
 	// `array<string>` does satisfy `array<any>`
-	expect(solver.satisfies(generic("T", array(any)), array(string))).toBeTruthy();
+	expect(
+		solver.satisfies(generic("T", array(any)), array(string)),
+	).toBeTruthy();
 });
 
 test("generics should throw on nonexistant generic solving with bound", () => {
 	const solver = new TypeSolver();
 
-	expect(() => solver.satisfies(generic("T", array(number)), generic("T"))).toThrow("Undefined generic T while solving");
-	expect(() => solver.satisfies(generic("K", string), generic("K"))).toThrow("Undefined generic K while solving");
+	expect(() =>
+		solver.satisfies(generic("T", array(number)), generic("T")),
+	).toThrow("Undefined generic T while solving");
+	expect(() => solver.satisfies(generic("K", string), generic("K"))).toThrow(
+		"Undefined generic K while solving",
+	);
 
-	expect(() => solver.satisfies(generic("T"), generic("T", array(number)))).toThrow("Undefined generic T while solving");
-	expect(() => solver.satisfies(generic("K"), generic("K", string))).toThrow("Undefined generic K while solving");
+	expect(() =>
+		solver.satisfies(generic("T"), generic("T", array(number))),
+	).toThrow("Undefined generic T while solving");
+	expect(() => solver.satisfies(generic("K"), generic("K", string))).toThrow(
+		"Undefined generic K while solving",
+	);
 });
 
 test("generics should handle self satisfying with single bound", () => {
