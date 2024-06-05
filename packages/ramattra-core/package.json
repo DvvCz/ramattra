@@ -1,16 +1,8 @@
 {
-	"name": "@ramattra/ramattra-core",
-	"author": "David Cruz",
-	"description": "The main repository containing the parser and assembler for Ramattra",
-	"version": "0.1.0",
-	"private": true,
-	"main": "lib/index.js",
-	"types": "lib/index.d.ts",
-	"scripts": {
-		"build": "tsc -b",
-		"watch": "tsc --watch"
-	},
-	"dependencies": {
-		"peggy": "^3.0.2"
-	}
+  "name": "@ramattra/ramattra-core",
+  "version": "0.1.0",
+  "author": "David Cruz",
+  "main": "src/index.ts",
+  "description": "The main repository containing the parser and assembler for Ramattra",
+  "private": true
 }

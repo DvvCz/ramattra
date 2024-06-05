@@ -5,11 +5,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"bin": {
-		"ramattra": "./dist/index.js"
-	},
-	"main": "index.js",
-	"scripts": {
-		"build": "tsc -b"
+		"ramattra": "src/index.ts"
 	},
 	"dependencies": {
 		"commander": "^11.0.0"

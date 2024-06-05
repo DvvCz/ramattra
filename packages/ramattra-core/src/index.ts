@@ -1,6 +1,6 @@
-export { FUNCTIONS, CONSTANTS, EVENTS } from "./compiler/std.js";
+export { FUNCTIONS, CONSTANTS, EVENTS } from "./compiler/std";
 
-export { parse, type Error } from "./compiler/parser.js";
-export { assemble } from "./compiler/assembler.js";
-export { analyze } from "./compiler/analyzer.js";
-export { reprType, type Type } from "./compiler/typing.js";
+export { parse } from "./compiler/parser";
+export { assemble } from "./compiler/assembler";
+export { analyze } from "./compiler/analyzer";
+export { reprType, type Type } from "./compiler/typing";

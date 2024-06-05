@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
-import { type Error, assemble } from "@ramattra/ramattra-core";
+import { assemble } from "@ramattra/ramattra-core";
 
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
@@ -41,8 +41,7 @@ const App = () => {
 			setOutCode(assemble(inCode));
 			setPopupMessage("Successfully compiled code");
 		} catch (err) {
-			const error = err as Error;
-			setOutCode(`Failed: ${error.message}`);
+			setOutCode(`Failed: ${err}`);
 			setPopupMessage("Failed to compile code");
 		}
 

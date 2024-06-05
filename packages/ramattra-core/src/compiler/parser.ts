@@ -124,7 +124,7 @@ export const parse = (tokens: Token[]): Node[] => {
 		}
 	};
 
-	const consumeOneOf = (variants: Token["kind"][]): Token | undefined => {
+	const maybeOneOf = (variants: Token["kind"][]): Token | undefined => {
 		for (const variant of variants) {
 			const match = maybe(variant);
 			if (match) {
@@ -141,9 +141,17 @@ export const parse = (tokens: Token[]): Node[] => {
 		if (!lhs) return;
 
 		while (index < tokens.length) {
-			const op = consumeOneOf(ops);
+			const op = maybeOneOf(ops);
 			if (!op) break;
-			lhs = { kind: op.kind as any, lhs, rhs: exp() } as any;
+
+			const rhs = exp();
+
+			lhs = {
+				kind: op.kind as any,
+				lhs,
+				rhs,
+				span: spanned(lhs!.span, rhs!.span),
+			};
 		}
 
 		return lhs;

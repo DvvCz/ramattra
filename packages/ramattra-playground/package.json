@@ -5,9 +5,9 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "vite",
-		"build": "tsc -b && vite build",
-		"preview": "vite preview"
+		"dev": "bunx --bun vite",
+		"build": "bunx --bun vite build",
+		"preview": "bunx --bun vite preview"
 	},
 	"dependencies": {
 		"@monaco-editor/react": "^4.5.2",
