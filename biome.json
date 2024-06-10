@@ -17,6 +17,7 @@
 			"suspicious": {
 				"noExplicitAny": "off",
 				"noAssignInExpressions": "off",
+				"noImplicitAnyLet": "off",
 				"noShadowRestrictedNames": "off"
 			},
 			"complexity": {

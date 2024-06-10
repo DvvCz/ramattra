@@ -9,61 +9,25 @@ const WHITESPACE_REGEX = /\s+/y;
 const COMMENT_REGEX = /\/\/([^\n]+)/y;
 const MCOMMENT_REGEX = /\/\*(.*?)\*\//y;
 
+// biome-ignore format: Already formatted
 export const SPECIAL = [
 	/* Keywords */
-	"let",
-	"while",
-	"if",
-	"for",
-	"const",
-	"return",
-	"break",
-	"continue",
+	"let", "while", "if",
+	"for", "const", "return",
+	"break", "continue", "in",
 
 	/* Operators */
-	"=",
-	"+=",
-	"-=",
-	"*=",
-	"/=",
-	"%=",
+	"=", "+=", "-=", "*=", "/=", "%=",
+	"==", "!=", ">=", "<=", ">", "<",
+	"||", "&&",
 
-	"==",
-	"!=",
-	">=",
-	"<=",
-	">",
-	"<",
+	"&", "|", "^", ">>", "<<", ">>>", "<<<",
+	"+", "-", "*", "/", "%",
 
-	"||",
-	"&&",
+	"!", "typeof",
 
-	"&",
-	"|",
-	"^",
-	">>",
-	"<<",
-	">>>",
-	"<<<",
-
-	"+",
-	"-",
-	"*",
-	"/",
-	"%",
-
-	"{",
-	"}",
-	"(",
-	")",
-	"[",
-	"]",
-	",",
-	":",
-	".",
-
-	"!",
-	"typeof",
+	"{", "}", "(", ")", "[", "]",
+	",", ":", ".",
 ] as const;
 
 export type Span = [number, number];
@@ -73,7 +37,15 @@ export type Token = { span: Span } & (
 	| { kind: "number"; val: number }
 	| { kind: "string"; val: string }
 	| { kind: "boolean"; val: boolean }
-	| { kind: (typeof SPECIAL)[keyof typeof SPECIAL] }
+
+	/*
+		This really ugly solution is used to fix Extract<T, U>
+		Otherwise simply { kind: typeof SPECIAL[number] } would work.
+
+		If you're seeing this and are a typescript wizard, please do let me know if there is
+		a better solution.
+	*/
+	| { [K in (typeof SPECIAL)[number]]: { kind: K } }[(typeof SPECIAL)[number]]
 );
 
 export const tokenize = (code: string): Token[] => {
@@ -107,24 +79,24 @@ export const tokenize = (code: string): Token[] => {
 		if ((d = consume(IDENT_REGEX))) {
 			if (SPECIAL.includes(d as any)) {
 				tokens.push({
-					span: [start, ptr],
+					span: [start, ptr - 1],
 					kind: d as any,
 				});
 			} else {
-				tokens.push({ span: [start, ptr], kind: "ident", val: d });
+				tokens.push({ span: [start, ptr - 1], kind: "ident", val: d });
 			}
 
 			continue;
 		}
 
 		if ((d = consume(STRING_REGEX))) {
-			tokens.push({ span: [start, ptr], kind: "string", val: d });
+			tokens.push({ span: [start, ptr - 1], kind: "string", val: d });
 			continue;
 		}
 
 		if ((d = consume(HEX_REGEX))) {
 			tokens.push({
-				span: [start, ptr],
+				span: [start, ptr - 1],
 				kind: "number",
 				val: Number.parseInt(d, 16),
 			});
@@ -134,7 +106,7 @@ export const tokenize = (code: string): Token[] => {
 
 		if ((d = consume(BINARY_REGEX))) {
 			tokens.push({
-				span: [start, ptr],
+				span: [start, ptr - 1],
 				kind: "number",
 				val: Number.parseInt(d, 2),
 			});
@@ -144,7 +116,7 @@ export const tokenize = (code: string): Token[] => {
 
 		if ((d = consume(DECIMAL_REGEX))) {
 			tokens.push({
-				span: [start, ptr],
+				span: [start, ptr - 1],
 				kind: "number",
 				val: Number.parseFloat(d),
 			});
@@ -154,28 +126,33 @@ export const tokenize = (code: string): Token[] => {
 
 		if ((d = consume(INTEGER_REGEX))) {
 			tokens.push({
-				span: [start, ptr],
+				span: [start, ptr - 1],
 				kind: "number",
 				val: Number.parseInt(d, 10),
 			});
 			continue;
 		}
 
-		const op3 = code.slice(ptr, ptr + 2);
-		if (SPECIAL.includes(op3 as any)) {
-			tokens.push({ span: [start, (ptr += 3)], kind: op3 as any });
-			continue;
-		}
-
-		const op2 = code.slice(ptr, ptr + 1);
-		if (SPECIAL.includes(op2 as any)) {
-			tokens.push({ span: [start, (ptr += 2)], kind: op2 as any });
-			continue;
+		if (ptr + 2 < code.length) {
+			const op3 = code.substring(ptr, ptr + 3);
+			if (SPECIAL.includes(op3 as any)) {
+				ptr += 3;
+				tokens.push({ span: [start, start + 2], kind: op3 as any });
+				continue;
+			}
+		} else if (ptr + 1 < code.length) {
+			const op2 = code.substring(ptr, ptr + 2);
+			if (SPECIAL.includes(op2 as any)) {
+				ptr += 2;
+				tokens.push({ span: [start, start + 1], kind: op2 as any });
+				continue;
+			}
 		}
 
 		const op1 = code[ptr];
 		if (SPECIAL.includes(op1 as any)) {
-			tokens.push({ span: [start, ptr++], kind: op1 as any });
+			ptr += 1;
+			tokens.push({ span: [start, start], kind: op1 as any });
 			continue;
 		}
 

@@ -1,4 +1,4 @@
-import type { Token, Span } from "./tokenizer";
+import type { Token, Span, SPECIAL } from "./tokenizer";
 import type { Type } from "./typing";
 
 export type Node = { span: Span } /* Statements */ & (
@@ -45,53 +45,52 @@ export type Node = { span: Span } /* Statements */ & (
 	| { kind: "call"; name: string; args: Node[] }
 );
 
-const spanned = (s1: Span, s2: Span): Span => {
-	return [s1[0], s2[1]];
-};
-
 export const parse = (tokens: Token[]): Node[] => {
 	let index = 0;
 
-	const maybe = <const T extends Token["kind"]>(
+	const spanned = (s1: Span, s2?: Span): Span => {
+		return [s1[0], (s2 ?? tokens[index - 1].span)[1]];
+	};
+
+	const maybe = <T extends Token["kind"]>(
 		variant: T,
 	): Extract<Token, { kind: T }> | undefined => {
 		const entry = tokens[index];
-		if (entry) {
-			if (entry.kind !== variant) {
-				return;
-			}
-
+		if (entry && entry.kind === variant) {
 			index++;
 			return entry as any;
 		}
 	};
 
-	const expect = <const T extends Token["kind"]>(
+	const expect = <T extends Token["kind"]>(
 		variant: T,
 	): Extract<Token, { kind: T }> => {
 		const entry = tokens[index];
-		if (entry) {
-			if (entry.kind !== variant) {
-				throw `Expected ${variant}, got ${entry.kind}`;
-			}
-
+		if (entry && entry.kind === variant) {
 			index++;
 			return entry as any;
 		}
 
-		throw `Expected ${variant}, got EOF`;
+		throw `Expected ${variant}, got ${entry ? entry.kind : "EOF"}`;
 	};
 
 	const maybeAtom = (): Node | undefined => {
-		if (maybe("!")) {
-			return expectExpr("for unary not");
+		let d;
+		if ((d = maybe("!"))) {
+			return {
+				kind: "!",
+				obj: expectExpr("for unary not"),
+				span: spanned(d.span),
+			};
 		}
 
-		if (maybe("typeof")) {
-			return expectExpr("for typeof");
+		if ((d = maybe("typeof"))) {
+			return {
+				kind: "typeof",
+				obj: expectExpr("for typeof"),
+				span: spanned(d.span),
+			};
 		}
-
-		let d: Token | undefined;
 
 		if ((d = maybe("number"))) {
 			return { kind: "number", val: d.val, span: d.span };
@@ -109,22 +108,26 @@ export const parse = (tokens: Token[]): Node[] => {
 			return { kind: "ident", val: d.val, span: d.span };
 		}
 
-		if (maybe("[")) {
+		if ((d = maybe("["))) {
 			const items = [];
 			do {
 				if (maybe("]")) {
 					break;
 				}
 
-				items.push(expectExpr("For array"));
+				items.push(expectExpr("for array"));
 				maybe(",");
 			} while (index < tokens.length);
 
-			return { kind: "array", val: items, span: [0, 0] };
+			return {
+				kind: "array",
+				val: items,
+				span: spanned(d.span),
+			};
 		}
 	};
 
-	const maybeOneOf = (variants: Token["kind"][]): Token | undefined => {
+	const maybeOneOf = (variants: Token["kind"][]) => {
 		for (const variant of variants) {
 			const match = maybe(variant);
 			if (match) {
@@ -136,7 +139,7 @@ export const parse = (tokens: Token[]): Node[] => {
 	const maybeOpInfix = (
 		exp: () => Node | undefined,
 		ops: Token["kind"][],
-	): Node | undefined => {
+	) => {
 		let lhs = exp();
 		if (!lhs) return;
 
@@ -144,13 +147,11 @@ export const parse = (tokens: Token[]): Node[] => {
 			const op = maybeOneOf(ops);
 			if (!op) break;
 
-			const rhs = exp();
-
 			lhs = {
 				kind: op.kind as any,
-				lhs,
-				rhs,
-				span: spanned(lhs!.span, rhs!.span),
+				lhs: lhs,
+				rhs: exp(),
+				span: spanned(lhs!.span),
 			};
 		}
 
@@ -177,6 +178,38 @@ export const parse = (tokens: Token[]): Node[] => {
 		return e;
 	};
 
+	const maybeType = (): Type | undefined => {
+		let ty: Type | undefined;
+
+		let d;
+		if ((d = maybe("ident"))) {
+			ty = { kind: "native", name: d.val };
+		}
+
+		if (ty) {
+			if (maybe("[")) {
+				expect("]");
+				ty = { kind: "array", item: ty };
+			}
+
+			if (maybe("|")) {
+				ty = { kind: "union", types: [ty, expectType("for union")] };
+
+				while (maybe("|")) {
+					ty.types.push(expectType("for union"));
+				}
+			}
+
+			return ty;
+		}
+	};
+
+	const expectType = (msg: string): Type => {
+		const t = maybeType();
+		if (!t) throw `Expected a type ${msg}`;
+		return t;
+	};
+
 	let last_idx = index;
 	const stmtSpan = () => {
 		return spanned(
@@ -186,7 +219,8 @@ export const parse = (tokens: Token[]): Node[] => {
 	};
 
 	const maybeBlock = (): Node | undefined => {
-		if (maybe("{")) {
+		let d;
+		if ((d = maybe("{"))) {
 			const stmts: Node[] = [];
 
 			do {
@@ -197,7 +231,7 @@ export const parse = (tokens: Token[]): Node[] => {
 				stmts.push(expectStmt("for block"));
 			} while (index < tokens.length);
 
-			return { kind: "scope", stmts, span: [0, 0] };
+			return { kind: "scope", stmts, span: spanned(d.span) };
 		}
 	};
 
@@ -232,6 +266,10 @@ export const parse = (tokens: Token[]): Node[] => {
 				block,
 				span: stmtSpan(),
 			};
+		}
+
+		if (maybe("for")) {
+			throw "tbd: for loop";
 		}
 	};
 
