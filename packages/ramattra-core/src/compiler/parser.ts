@@ -5,8 +5,9 @@ export type Node = { span: Span } /* Statements */ & (
 	| { kind: "scope"; stmts: Node[] }
 	| { kind: "if"; cond: Node; block: Node }
 	| { kind: "while"; cond: Node; block: Node }
-	| { kind: "let"; name: string; ty?: Type; val?: Node }
-	| { kind: "const"; name: string; ty?: Type; val: Node }
+	| { kind: "fn", params: { name: string, ty: Type, span: Span }[], block: Node, ret?: Type }
+	| { kind: "let"; name: string; hint?: Type; val?: Node }
+	| { kind: "const"; name: string; hint?: Type; val: Node }
 	| { kind: "assign"; name: string; val: Node }
 	| { kind: "iassign"; index: Node; name: string; val: Node }
 	| { kind: "return"; val: Node }
@@ -42,19 +43,17 @@ export type Node = { span: Span } /* Statements */ & (
 	| { kind: "array"; val: Node[] }
 
 	/* Ambiguous */
-	| { kind: "call"; name: string; args: Node[] }
+	| { kind: "call"; fn: Node; args: Node[] }
 );
 
-export const parse = (tokens: Token[]): Node[] => {
+export const parse = (tokens: Token[]): Node => {
 	let index = 0;
 
 	const spanned = (s1: Span, s2?: Span): Span => {
-		return [s1[0], (s2 ?? tokens[index - 1].span)[1]];
+		return [s1[0], (s2 ?? tokens[index - 1].span ?? [0, 0])[1]];
 	};
 
-	const maybe = <T extends Token["kind"]>(
-		variant: T,
-	): Extract<Token, { kind: T }> | undefined => {
+	const maybe = <T extends Token["kind"]>(variant: T): Extract<Token, { kind: T }> | undefined => {
 		const entry = tokens[index];
 		if (entry && entry.kind === variant) {
 			index++;
@@ -62,9 +61,7 @@ export const parse = (tokens: Token[]): Node[] => {
 		}
 	};
 
-	const expect = <T extends Token["kind"]>(
-		variant: T,
-	): Extract<Token, { kind: T }> => {
+	const expect = <T extends Token["kind"]>(variant: T): Extract<Token, { kind: T }> => {
 		const entry = tokens[index];
 		if (entry && entry.kind === variant) {
 			index++;
@@ -104,6 +101,12 @@ export const parse = (tokens: Token[]): Node[] => {
 			return { kind: "boolean", val: d.val, span: d.span };
 		}
 
+		if ((d = maybe("("))) {
+			const e = expectExpr("for grouped expression");
+			expect(")");
+			return e;
+		}
+
 		if ((d = maybe("ident"))) {
 			return { kind: "ident", val: d.val, span: d.span };
 		}
@@ -136,10 +139,7 @@ export const parse = (tokens: Token[]): Node[] => {
 		}
 	};
 
-	const maybeOpInfix = (
-		exp: () => Node | undefined,
-		ops: Token["kind"][],
-	) => {
+	const maybeOpInfix = (exp: () => Node | undefined, ops: Token["kind"][]) => {
 		let lhs = exp();
 		if (!lhs) return;
 
@@ -159,7 +159,7 @@ export const parse = (tokens: Token[]): Node[] => {
 	};
 
 	const maybeExpr = (): Node | undefined => {
-		return maybeOpInfix(() => {
+		let e = maybeOpInfix(() => {
 			return maybeOpInfix(() => {
 				return maybeOpInfix(() => {
 					return maybeOpInfix(() => {
@@ -170,6 +170,52 @@ export const parse = (tokens: Token[]): Node[] => {
 				}, ["|", "&", "^"]);
 			}, ["||", "&&"]);
 		}, ["==", "!=", ">", "<", ">=", "<="]);
+
+		if (!e) {
+			return;
+		}
+
+		if (maybe("(")) {
+			const args: Node[] = [];
+
+			if (maybe(")")) {
+				e = {
+					kind: "call",
+					fn: e,
+					args,
+					span: spanned(e.span)
+				}
+			} else {
+				while (true) {
+					args.push(expectExpr("for call argument"));
+					if (maybe(","))
+						break;
+				}
+
+				expect(")");
+
+				e = {
+					kind: "call",
+					fn: e,
+					args,
+					span: spanned(e.span)
+				};
+			}
+		}
+
+		while (maybe("[")) {
+			const idx = expectExpr("for indexing operation");
+			expect("]");
+
+			e = {
+				kind: "[]",
+				index: idx,
+				obj: e,
+				span: spanned(e.span)
+			};
+		}
+
+		return e;
 	};
 
 	const expectExpr = (msg: string): Node => {
@@ -212,10 +258,7 @@ export const parse = (tokens: Token[]): Node[] => {
 
 	let last_idx = index;
 	const stmtSpan = () => {
-		return spanned(
-			tokens[last_idx].span,
-			tokens[(last_idx = index) - 1].span,
-		);
+		return spanned(tokens[last_idx].span, tokens[(last_idx = index) - 1].span);
 	};
 
 	const maybeBlock = (): Node | undefined => {
@@ -224,11 +267,9 @@ export const parse = (tokens: Token[]): Node[] => {
 			const stmts: Node[] = [];
 
 			do {
-				if (maybe("}")) {
-					break;
-				}
-
+				if (maybe("}")) break;
 				stmts.push(expectStmt("for block"));
+				maybe(";");
 			} while (index < tokens.length);
 
 			return { kind: "scope", stmts, span: spanned(d.span) };
@@ -241,16 +282,47 @@ export const parse = (tokens: Token[]): Node[] => {
 		return e;
 	};
 
+	const maybeParams = () => {
+		if (maybe("(")) {
+			const params: { name: string, ty: Type, span: Span }[] = [];
+
+			if (maybe(")"))
+				return params;
+
+			while (true) {
+				const name = expect("ident");
+				expect(":");
+				const ty = expectType("for param");
+
+				params.push({ name: name.val, span: spanned(name.span), ty });
+
+				if (!maybe(","))
+					break;
+			}
+
+			expect(")");
+
+			return params;
+		}
+	};
+
+	const expectParams = (msg: string) => {
+		const p = maybeParams();
+		if (!p) throw `Expected parameters ${msg}`;
+		return p;
+	};
+
 	const maybeStmt = (): Node | undefined => {
 		if (maybe("let")) {
 			const name = expect("ident");
+			const hint = maybe(":") && expectType("after :");
 			expect("=");
 			const val = expectExpr("to follow = for let declaration");
 
 			return {
 				kind: "let",
 				name: name.val,
-				ty: undefined,
+				hint,
 				val,
 				span: stmtSpan(),
 			};
@@ -271,6 +343,38 @@ export const parse = (tokens: Token[]): Node[] => {
 		if (maybe("for")) {
 			throw "tbd: for loop";
 		}
+
+		if (maybe("fn")) {
+			const name = expect("ident");
+			const params = expectParams(`for function ${name}`);
+			const block = expectBlock(`for function ${name}`);
+
+			if (maybe("->")) {
+				return {
+					kind: "fn",
+					params,
+					block,
+					ret: expectType("for function return"),
+					span: stmtSpan(),
+				}
+			}
+
+			return {
+				kind: "fn",
+				params,
+				block,
+				span: stmtSpan(),
+			}
+		}
+
+		let e;
+		if ((e = maybeExpr())) {
+			if (e.kind !== "call") {
+				throw "Can only use call expressions as statements, for now.";
+			}
+
+			return e;
+		}
 	};
 
 	const expectStmt = (msg: string): Node => {
@@ -283,7 +387,11 @@ export const parse = (tokens: Token[]): Node[] => {
 
 	while (index < tokens.length) {
 		stmts.push(expectStmt("for code"));
+
+		if (!maybe(";")) {
+			break;
+		}
 	}
 
-	return stmts;
+	return { kind: "scope", stmts, span: spanned([0, 0]) };
 };

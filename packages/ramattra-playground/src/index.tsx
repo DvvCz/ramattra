@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 
-import { assemble } from "@ramattra/ramattra-core";
+import { analyze, assemble, parse, tokenize } from "@ramattra/ramattra-core";
 
 const urlParams = new URLSearchParams(window.location.search);
 const codeParam = urlParams.get("code");
@@ -38,7 +38,7 @@ const App = () => {
 
 	function compile() {
 		try {
-			setOutCode(assemble(inCode));
+			setOutCode(assemble(analyze(parse(tokenize(inCode)))));
 			setPopupMessage("Successfully compiled code");
 		} catch (err) {
 			setOutCode(`Failed: ${err}`);

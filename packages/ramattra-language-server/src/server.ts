@@ -111,7 +111,7 @@ export const onInit = (connection: Connection) => {
 				},
 			}
 		}
-		
+
 		if (EVENTS[word]) {
 			const event = EVENTS[word];
 			return {

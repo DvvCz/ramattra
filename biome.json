@@ -5,14 +5,16 @@
 	},
 	"formatter": {
 		"indentStyle": "tab",
-		"indentWidth": 4
+		"indentWidth": 4,
+		"lineWidth": 120
 	},
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
 			"style": {
-				"noNonNullAssertion": "off"
+				"noNonNullAssertion": "off",
+				"noUselessElse": "off"
 			},
 			"suspicious": {
 				"noExplicitAny": "off",

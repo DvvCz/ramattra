@@ -5,8 +5,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "playground:dev": "bun run --filter ./packages/ramattra-playground dev",
-    "playground:build": "bun run --filter ./packages/ramattra-playground build"
+    "pg:dev": "bun run --filter ./packages/ramattra-playground dev",
+    "pg:build": "bun run --filter ./packages/ramattra-playground build"
   },
   "workspaces": [
     "packages/*"

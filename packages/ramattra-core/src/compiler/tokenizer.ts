@@ -15,6 +15,7 @@ export const SPECIAL = [
 	"let", "while", "if",
 	"for", "const", "return",
 	"break", "continue", "in",
+	"fn",
 
 	/* Operators */
 	"=", "+=", "-=", "*=", "/=", "%=",
@@ -27,7 +28,7 @@ export const SPECIAL = [
 	"!", "typeof",
 
 	"{", "}", "(", ")", "[", "]",
-	",", ":", ".",
+	",", ":", ".", ";", "->"
 ] as const;
 
 export type Span = [number, number];
@@ -65,11 +66,7 @@ export const tokenize = (code: string): Token[] => {
 	while (ptr < code.length) {
 		let d: string | undefined;
 
-		if (
-			consume(WHITESPACE_REGEX) ||
-			consume(COMMENT_REGEX) ||
-			consume(MCOMMENT_REGEX)
-		) {
+		if (consume(WHITESPACE_REGEX) || consume(COMMENT_REGEX) || consume(MCOMMENT_REGEX)) {
 			continue;
 		}
 

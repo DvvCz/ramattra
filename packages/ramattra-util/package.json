@@ -1,8 +1,11 @@
 {
-	"name": "@ramattra/ramattra-util",
-	"author": "David Cruz",
-	"description": "Utilities for Ramattra subprojects.",
-	"version": "0.1.0",
-	"private": true,
-	"main": "src/index.ts"
+  "name": "@ramattra/ramattra-util",
+  "author": "David Cruz",
+  "description": "Utilities for Ramattra subprojects.",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "ts-dedent": "^2.2.0"
+  }
 }
